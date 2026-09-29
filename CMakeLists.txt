@@ -73,3 +73,28 @@ emerald_set_warnings(Asteroids) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewher
 
 # Make Asteroids the default target to run/debug in Visual Studio.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Asteroids)
+
+# Optional sound overrides: copies assets/sounds/ (player-supplied files, not in git) next to the
+# executable. A custom target instead of a POST_BUILD step, so files added later are copied on the
+# next build even when the game itself did not need relinking.
+add_custom_target(AsteroidsAssets
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Asteroids>/assets/sounds"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds" "$<TARGET_FILE_DIR:Asteroids>/assets/sounds"
+    COMMENT "Copying assets/sounds next to the executable"
+    VERBATIM
+)
+add_dependencies(Asteroids AsteroidsAssets)
+
+# ---------------------------------------------------------------------------
+# Tests (ctest): the sound override loader, with generated files
+# ---------------------------------------------------------------------------
+option(ASTEROIDS_BUILD_TESTS "Build the Asteroids tests" ON)
+if(ASTEROIDS_BUILD_TESTS)
+    enable_testing()
+    add_executable(AsteroidsTests tests/SoundOverrideTests.cpp src/Sounds.cpp)
+    target_include_directories(AsteroidsTests PRIVATE src)
+    target_link_libraries(AsteroidsTests PRIVATE Emerald::Emerald)
+    emerald_set_warnings(AsteroidsTests)
+    add_test(NAME SoundOverrides COMMAND AsteroidsTests)
+endif()

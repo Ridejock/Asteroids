@@ -28,3 +28,7 @@ Thumbs.db
 imgui.ini
 *.log
 logs/
+
+# Player-supplied sound overrides (often copyrighted): never committed, only the README
+assets/sounds/*
+!assets/sounds/README.md

@@ -6,10 +6,13 @@
 
 #include <charconv>
 #include <cmath>
+#include <filesystem>
 #include <random>
 #include <string>
 #include <string_view>
 #include <utility>
+
+#include <SDL3/SDL_filesystem.h>
 
 #include <Emerald/Emerald.h>
 
@@ -71,6 +74,7 @@ protected:
         input.BindAction("Quit", {Key::Escape});
 
         m_Sounds = Asteroids::MakeSounds(); // all generated, takes a few milliseconds
+        LoadSoundOverrides();
     }
 
     void OnFixedUpdate(f32 dt) override
@@ -100,6 +104,7 @@ protected:
         if (GetInput().WasActionPressed("Mute"))
             GetAudio().SetMuted(!GetAudio().IsMuted());
         UpdateStartPrompt();
+        UpdateBackgroundSounds();
 
         // For --screenshot: capture the last frame of a --frames run (or frame 120 otherwise).
         const u64 shotFrame = m_Options.Frames != 0 ? m_Options.Frames : 120;
@@ -163,6 +168,9 @@ protected:
         bool muted = audio.IsMuted();
         if (ImGui::Checkbox("Muted (M)", &muted))
             audio.SetMuted(muted);
+        if (ImGui::SliderFloat("Ambience volume", &m_AmbienceVolume, 0.0f, 1.0f))
+            audio.SetVolume(m_AmbienceVoice, m_AmbienceVolume);
+        ImGui::Text("Sound overrides: %s", m_Overrides.empty() ? "none" : m_Overrides.c_str());
         ImGui::Text("Audio: %s, %zu voices playing", audio.IsAvailable() ? "on" : "no device",
                     audio.GetPlayingCount());
         ImGui::End();
@@ -170,6 +178,40 @@ protected:
     }
 
 private:
+    // Player-supplied sounds in assets/sounds/ next to the executable replace generated ones.
+    void LoadSoundOverrides()
+    {
+        // SDL_GetBasePath is UTF-8 (and ends with a separator).
+        const std::string base = SDL_GetBasePath() ? SDL_GetBasePath() : "";
+        const std::filesystem::path folder =
+            std::filesystem::path(std::u8string(base.begin(), base.end())) / "assets" / "sounds";
+        for (const std::string& name : Asteroids::LoadOverrides(m_Sounds, folder))
+            m_Overrides += (m_Overrides.empty() ? "" : ", ") + name;
+        EM_INFO("Sound overrides from {}: {}", folder.string(),
+                m_Overrides.empty() ? "none (using generated sounds)" : m_Overrides);
+    }
+
+    // Optional loops: `ambience` under the gameplay, `music` on the game over screen, cross-faded
+    // when the state changes. Without those files nothing plays (Play ignores empty sounds).
+    void UpdateBackgroundSounds()
+    {
+        const bool gameOver = m_Game.IsGameOver();
+        if (m_BackgroundStarted && gameOver == m_WasGameOver)
+            return;
+        m_BackgroundStarted = true;
+        m_WasGameOver = gameOver;
+        Emerald::Audio& audio = GetAudio();
+        if (gameOver) {
+            audio.Stop(m_AmbienceVoice, 800.0f);
+            m_MusicVoice = audio.Play(m_Sounds.Music,
+                                      {.Volume = kMusicVolume, .Loop = true, .FadeInMs = 1500.0f});
+        } else {
+            audio.Stop(m_MusicVoice, 600.0f);
+            m_AmbienceVoice = audio.Play(
+                m_Sounds.Ambience, {.Volume = m_AmbienceVolume, .Loop = true, .FadeInMs = 1500.0f});
+        }
+    }
+
     // Plays what the game asked for this step, and starts/stops the looping thrust sound.
     void PlayGameSounds()
     {
@@ -243,6 +285,13 @@ private:
     Asteroids::Sounds m_Sounds;
     Emerald::VoiceHandle m_ThrustVoice;
     bool m_WasThrusting = false;
+    static constexpr f32 kMusicVolume = 0.35f;
+    f32 m_AmbienceVolume = 0.25f;
+    Emerald::VoiceHandle m_MusicVoice;
+    Emerald::VoiceHandle m_AmbienceVoice;
+    bool m_BackgroundStarted = false;
+    bool m_WasGameOver = false;
+    std::string m_Overrides; // names of the loaded overrides, for the log and the debug panel
 };
 
 Options ParseOptions(i32 argc, char** argv)

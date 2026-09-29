@@ -1,6 +1,13 @@
 #include "Sounds.h"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <optional>
 #include <span>
+#include <string>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 #include <Emerald/Audio/Synth.h>
@@ -49,6 +56,29 @@ Emerald::Sound Thump(f32 hz)
     ApplyAdsr(s, {.Attack = 0.002f, .Decay = 0.05f, .Sustain = 0.6f, .Release = 0.04f});
     return ToSound(s);
 }
+
+f32 Peak(const Emerald::Sound& sound)
+{
+    f32 peak = 0.0f;
+    for (f32 s : sound.GetSamples())
+        peak = std::max(peak, std::abs(s));
+    return peak;
+}
+
+// A copy of `sound` scaled so its loudest sample is at `target`.
+Emerald::Sound WithPeak(const Emerald::Sound& sound, f32 target)
+{
+    const f32 peak = Peak(sound);
+    if (peak < 1e-6f)
+        return sound; // silent file: nothing to scale
+    std::vector<f32> samples(sound.GetSamples().begin(), sound.GetSamples().end());
+    for (f32& s : samples)
+        s *= target / peak;
+    return Emerald::Sound(std::move(samples));
+}
+
+// Music and ambience have no generated version to match; their play volume is set in Main.cpp.
+constexpr f32 kBackgroundPeak = 0.8f;
 
 } // namespace
 
@@ -115,6 +145,48 @@ Sounds MakeSounds()
     sounds.BeatHigh = Thump(62.0f);
     sounds.BeatLow = Thump(52.0f);
     return sounds;
+}
+
+std::vector<std::string> LoadOverrides(Sounds& sounds, const std::filesystem::path& folder)
+{
+    struct Override {
+        const char* Name;
+        Emerald::Sound Sounds::* Member;
+    };
+    static constexpr std::array<Override, 12> kOverrides{{
+        {"fire", &Sounds::Fire},
+        {"thrust", &Sounds::Thrust},
+        {"bang_large", &Sounds::ExplosionLarge},
+        {"bang_medium", &Sounds::ExplosionMedium},
+        {"bang_small", &Sounds::ExplosionSmall},
+        {"ship_explode", &Sounds::ShipExplosion},
+        {"extra_life", &Sounds::ExtraLife},
+        {"beat1", &Sounds::BeatHigh},
+        {"beat2", &Sounds::BeatLow},
+        {"hyperspace", &Sounds::Hyperspace},
+        {"music", &Sounds::Music},
+        {"ambience", &Sounds::Ambience},
+    }};
+
+    std::vector<std::string> loaded;
+    for (const Override& o : kOverrides) {
+        for (const char* extension : {".mp3", ".wav"}) {
+            const std::filesystem::path file = folder / (std::string(o.Name) + extension);
+            std::error_code error; // missing folder or file: just not overridden
+            if (!std::filesystem::is_regular_file(file, error))
+                continue;
+            // LoadSound logs why a file could not be used; the generated sound stays then.
+            if (std::optional<Emerald::Sound> sound = Emerald::LoadSound(file)) {
+                // Scaled to the level of the generated sound it replaces, so a full-scale clip
+                // does not drown out everything else (or keep the limiter busy).
+                Emerald::Sound& slot = sounds.*o.Member;
+                slot = WithPeak(*sound, slot.IsEmpty() ? kBackgroundPeak : Peak(slot));
+                loaded.emplace_back(o.Name);
+            }
+            break; // .mp3 wins over .wav
+        }
+    }
+    return loaded;
 }
 
 } // namespace Asteroids
