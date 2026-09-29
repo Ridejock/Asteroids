@@ -9,18 +9,10 @@
 #include <string>
 #include <vector>
 
+#include "Check.h"
 #include "Sounds.h"
 
 namespace {
-
-i32 g_Failures = 0;
-
-void Check(bool condition, const char* what)
-{
-    std::printf("[%s] %s\n", condition ? " OK " : "FAIL", what);
-    if (!condition)
-        ++g_Failures;
-}
 
 // Writes `seconds` of a 440 Hz sine as a mono 16-bit 8 kHz WAV file.
 void WriteWav(const std::filesystem::path& path, f32 seconds)
@@ -73,7 +65,13 @@ int main()
     Asteroids::Sounds sounds = Asteroids::MakeSounds();
     const f32 thrustSeconds = sounds.Thrust.GetDurationSeconds();
     const f32 firePeak = Peak(sounds.Fire);
+    const f32 saucerPeak = Peak(sounds.SaucerSmall);
     Check(sounds.Music.IsEmpty() && sounds.Ambience.IsEmpty(), "no music/ambience by default");
+    Check(!sounds.SaucerLarge.IsEmpty() && !sounds.SaucerSmall.IsEmpty() &&
+              !sounds.SaucerFire.IsEmpty(),
+          "saucer sounds are generated");
+    Check(std::abs(sounds.SaucerLarge.GetDurationSeconds() - 1.0f) < 0.01f,
+          "saucer loop is one second (whole wobbles)");
 
     // A missing folder changes nothing.
     Check(Asteroids::LoadOverrides(sounds, folder).empty(), "missing folder: no overrides");
@@ -81,11 +79,16 @@ int main()
     std::filesystem::create_directories(folder);
     WriteWav(folder / "fire.wav", 0.2f);
     WriteWav(folder / "music.wav", 1.5f);
+    WriteWav(folder / "saucer_small.wav", 0.5f);
     WriteWav(folder / "unknown_name.wav", 0.1f);                  // not a known name: ignored
     std::ofstream(folder / "thrust.mp3") << "this is not an mp3"; // broken: keeps the generated
 
     const std::vector<std::string> loaded = Asteroids::LoadOverrides(sounds, folder);
-    Check(loaded == std::vector<std::string>{"fire", "music"}, "fire and music loaded");
+    Check(loaded == std::vector<std::string>{"fire", "saucer_small", "music"},
+          "fire, saucer_small and music loaded");
+    Check(Near(sounds.SaucerSmall.GetDurationSeconds(), 0.5f) &&
+              Near(Peak(sounds.SaucerSmall), saucerPeak),
+          "saucer_small is the file, at the generated level");
     Check(Near(sounds.Fire.GetDurationSeconds(), 0.2f), "fire is the file (0.2 s)");
     Check(Near(Peak(sounds.Fire), firePeak), "fire scaled to the generated fire's level");
     Check(Near(Peak(sounds.Music), 0.8f), "music normalized to 0.8");

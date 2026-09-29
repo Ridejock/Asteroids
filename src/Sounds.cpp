@@ -57,6 +57,22 @@ Emerald::Sound Thump(f32 hz)
     return ToSound(s);
 }
 
+// The saucer's siren: a square wave whose pitch wobbles up and down, looped. The loop is a whole
+// number of wobbles long, so the cross-fade joins matching parts of the wobble.
+Emerald::Sound Warble(f32 hz, f32 wobbleHz, f32 volume)
+{
+    constexpr f32 kLoopSeconds = 1.0f; // wobbleHz * this should be a whole number
+    constexpr f32 kFade = 0.05f;
+    std::vector<f32> s = Generate({.Shape = Wave::Square,
+                                   .Seconds = kLoopSeconds + kFade,
+                                   .StartHz = hz,
+                                   .Volume = volume,
+                                   .VibratoHz = wobbleHz,
+                                   .VibratoDepth = 0.2f});
+    LowPass(s, 2500.0f);
+    return ToSound(MakeLoopable(std::move(s), kFade));
+}
+
 f32 Peak(const Emerald::Sound& sound)
 {
     f32 peak = 0.0f;
@@ -144,6 +160,21 @@ Sounds MakeSounds()
     // The heartbeat: two low tones a few semitones apart.
     sounds.BeatHigh = Thump(62.0f);
     sounds.BeatLow = Thump(52.0f);
+
+    // Saucers: the big one lower and slower, the small one higher and faster (and more urgent).
+    sounds.SaucerLarge = Warble(330.0f, 4.0f, 0.16f);
+    sounds.SaucerSmall = Warble(760.0f, 8.0f, 0.13f);
+
+    // Saucer shot: a thin pulse wave sweeping down, a little lower than the ship's.
+    std::vector<f32> saucerFire = Generate({.Shape = Wave::Square,
+                                            .Seconds = 0.14f,
+                                            .StartHz = 1000.0f,
+                                            .EndHz = 280.0f,
+                                            .Duty = 0.2f,
+                                            .Volume = 0.2f});
+    LowPass(saucerFire, 5000.0f);
+    ApplyDecay(saucerFire, 0.045f);
+    sounds.SaucerFire = ToSound(saucerFire);
     return sounds;
 }
 
@@ -153,7 +184,7 @@ std::vector<std::string> LoadOverrides(Sounds& sounds, const std::filesystem::pa
         const char* Name;
         Emerald::Sound Sounds::* Member;
     };
-    static constexpr std::array<Override, 12> kOverrides{{
+    static constexpr std::array<Override, 15> kOverrides{{
         {"fire", &Sounds::Fire},
         {"thrust", &Sounds::Thrust},
         {"bang_large", &Sounds::ExplosionLarge},
@@ -164,6 +195,9 @@ std::vector<std::string> LoadOverrides(Sounds& sounds, const std::filesystem::pa
         {"beat1", &Sounds::BeatHigh},
         {"beat2", &Sounds::BeatLow},
         {"hyperspace", &Sounds::Hyperspace},
+        {"saucer_large", &Sounds::SaucerLarge},
+        {"saucer_small", &Sounds::SaucerSmall},
+        {"saucer_fire", &Sounds::SaucerFire},
         {"music", &Sounds::Music},
         {"ambience", &Sounds::Ambience},
     }};

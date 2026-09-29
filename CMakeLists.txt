@@ -39,7 +39,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        6057aa9b2d025e7178939aa02ca6a8005d74b96c
+    GIT_TAG        017ed104fd30d137b7fb86f90f5c81b562840b0b
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
@@ -56,6 +56,10 @@ add_executable(Asteroids
     src/Asteroid.cpp
     src/Asteroid.h
     src/Bullet.h
+    src/HighScores.cpp
+    src/HighScores.h
+    src/Saucer.cpp
+    src/Saucer.h
     src/VectorFont.cpp
     src/VectorFont.h
     src/Playfield.h
@@ -87,14 +91,20 @@ add_custom_target(AsteroidsAssets
 add_dependencies(Asteroids AsteroidsAssets)
 
 # ---------------------------------------------------------------------------
-# Tests (ctest): the sound override loader, with generated files
+# Tests (ctest): the sound override loader (with generated files), and the pure game logic
+# (high score table, saucer aiming)
 # ---------------------------------------------------------------------------
 option(ASTEROIDS_BUILD_TESTS "Build the Asteroids tests" ON)
 if(ASTEROIDS_BUILD_TESTS)
     enable_testing()
-    add_executable(AsteroidsTests tests/SoundOverrideTests.cpp src/Sounds.cpp)
-    target_include_directories(AsteroidsTests PRIVATE src)
-    target_link_libraries(AsteroidsTests PRIVATE Emerald::Emerald)
-    emerald_set_warnings(AsteroidsTests)
+    add_executable(AsteroidsTests tests/SoundOverrideTests.cpp tests/Check.h src/Sounds.cpp)
+    add_executable(AsteroidsLogicTests tests/GameLogicTests.cpp tests/Check.h
+                   src/HighScores.cpp src/Saucer.cpp)
+    foreach(test_target AsteroidsTests AsteroidsLogicTests)
+        target_include_directories(${test_target} PRIVATE src)
+        target_link_libraries(${test_target} PRIVATE Emerald::Emerald)
+        emerald_set_warnings(${test_target})
+    endforeach()
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)
+    add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
 endif()

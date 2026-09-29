@@ -7,12 +7,11 @@
 #include <charconv>
 #include <cmath>
 #include <filesystem>
+#include <optional>
 #include <random>
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include <SDL3/SDL_filesystem.h>
 
 #include <Emerald/Emerald.h>
 
@@ -34,10 +33,41 @@ using Emerald::Vec2;
 
 // Command line options (handy for automated runs): --frames N quits after N frames,
 // --screenshot out.png saves the last frame, --seed N makes the asteroids repeatable.
+// For testing: --saucer large|small spawns a saucer right away, --game-over SCORE ends the game
+// at once with that score (to try the initials entry and the table).
 struct Options {
     u64 Frames = 0;
     std::string ScreenshotPath;
     u32 Seed = 0; // 0 = random
+    std::string Saucer;
+    std::optional<u32> GameOverScore;
+};
+
+// Up/Down auto-repeat while held (for cycling through letters): one step on every press (even a
+// very short tap), more after a short delay while the button stays down.
+class RepeatingPress {
+public:
+    bool Update(bool pressed, bool down, f32 dt)
+    {
+        if (pressed) {
+            m_HeldTime = 0.0f;
+            m_NextRepeat = kDelay;
+            return true;
+        }
+        if (!down)
+            return false;
+        m_HeldTime += dt;
+        if (m_HeldTime < m_NextRepeat)
+            return false;
+        m_NextRepeat += kInterval;
+        return true;
+    }
+
+private:
+    static constexpr f32 kDelay = 0.4f;     // seconds before repeating starts
+    static constexpr f32 kInterval = 0.09f; // seconds between repeats
+    f32 m_HeldTime = 0.0f;
+    f32 m_NextRepeat = kDelay;
 };
 
 class AsteroidsApp final : public Emerald::Application {
@@ -72,9 +102,25 @@ protected:
         input.BindAction("Mute", {Key::M});
         input.BindAction("Mute", {GamepadButton::Back});
         input.BindAction("Quit", {Key::Escape});
+        // Menu actions (entering initials).
+        input.BindAction("MenuUp", {Key::W, Key::Up});
+        input.BindAction("MenuUp", {GamepadButton::DPadUp, GamepadButton::LeftStickUp});
+        input.BindAction("MenuDown", {Key::S, Key::Down});
+        input.BindAction("MenuDown", {GamepadButton::DPadDown, GamepadButton::LeftStickDown});
+        input.BindAction("Confirm", {Key::Enter, Key::Space});
+        input.BindAction("Confirm", {GamepadButton::South});
+        input.BindAction("Back", {Key::Backspace});
+        input.BindAction("Back", {GamepadButton::East});
 
         m_Sounds = Asteroids::MakeSounds(); // all generated, takes a few milliseconds
         LoadSoundOverrides();
+        LoadHighScores();
+
+        if (m_Options.Saucer == "large" || m_Options.Saucer == "small")
+            m_Game.SpawnSaucer(m_Options.Saucer == "large" ? Asteroids::SaucerSize::Large
+                                                           : Asteroids::SaucerSize::Small);
+        if (m_Options.GameOverScore)
+            m_Game.ForceGameOver(*m_Options.GameOverScore);
     }
 
     void OnFixedUpdate(f32 dt) override
@@ -87,7 +133,15 @@ protected:
         input.FirePressed = in.WasActionPressed("Fire");
         input.HyperspacePressed = in.WasActionPressed("Hyperspace");
         input.StartPressed = in.WasActionPressed("Start");
+        input.MenuUpPressed =
+            m_MenuUp.Update(in.WasActionPressed("MenuUp"), in.IsActionDown("MenuUp"), dt);
+        input.MenuDownPressed =
+            m_MenuDown.Update(in.WasActionPressed("MenuDown"), in.IsActionDown("MenuDown"), dt);
+        input.ConfirmPressed = in.WasActionPressed("Confirm");
+        input.BackPressed = in.WasActionPressed("Back");
         m_Game.Update(input, dt);
+        if (m_Game.ConsumeHighScoresChanged() && !m_HighScoresFile.empty())
+            m_Game.GetHighScores().Save(m_HighScoresFile);
 
         // A short, heavy rumble when the ship is destroyed.
         if (m_Game.GetShipsLost() != m_ShipsLost) {
@@ -103,7 +157,7 @@ protected:
             Quit();
         if (GetInput().WasActionPressed("Mute"))
             GetAudio().SetMuted(!GetAudio().IsMuted());
-        UpdateStartPrompt();
+        UpdatePrompts();
         UpdateBackgroundSounds();
 
         // For --screenshot: capture the last frame of a --frames run (or frame 120 otherwise).
@@ -155,6 +209,15 @@ protected:
         ImGui::Text("Score %u, lives %u%s", m_Game.GetScore(), m_Game.GetLives(),
                     m_Game.IsGameOver() ? " (game over)" : "");
         ImGui::Text("Lines drawn: %u", GetRenderer2D().GetLastFrameLineCount());
+        // Testing shortcuts.
+        if (ImGui::Button("Large saucer"))
+            m_Game.SpawnSaucer(Asteroids::SaucerSize::Large);
+        ImGui::SameLine();
+        if (ImGui::Button("Small saucer"))
+            m_Game.SpawnSaucer(Asteroids::SaucerSize::Small);
+        ImGui::SameLine();
+        if (ImGui::Button("Game over"))
+            m_Game.ForceGameOver(m_Game.GetScore());
         const Emerald::Gamepads& pads = GetInput().GetGamepads();
         for (usize i = 0; i < pads.GetCount(); ++i)
             ImGui::Text("Pad: %s (%s)", pads.GetInfo(i).Name.c_str(),
@@ -181,14 +244,24 @@ private:
     // Player-supplied sounds in assets/sounds/ next to the executable replace generated ones.
     void LoadSoundOverrides()
     {
-        // SDL_GetBasePath is UTF-8 (and ends with a separator).
-        const std::string base = SDL_GetBasePath() ? SDL_GetBasePath() : "";
-        const std::filesystem::path folder =
-            std::filesystem::path(std::u8string(base.begin(), base.end())) / "assets" / "sounds";
+        const std::filesystem::path folder = Emerald::Paths::GetBasePath() / "assets" / "sounds";
         for (const std::string& name : Asteroids::LoadOverrides(m_Sounds, folder))
             m_Overrides += (m_Overrides.empty() ? "" : ", ") + name;
         EM_INFO("Sound overrides from {}: {}", folder.string(),
                 m_Overrides.empty() ? "none (using generated sounds)" : m_Overrides);
+    }
+
+    // The table lives in the per-user folder (e.g. %APPDATA%\Ridejock\Asteroids on Windows).
+    void LoadHighScores()
+    {
+        const std::filesystem::path folder = Emerald::Paths::GetPrefPath("Ridejock", "Asteroids");
+        if (folder.empty()) {
+            EM_WARN("No folder for high scores: they will not be saved");
+            return;
+        }
+        m_HighScoresFile = (folder / "highscores.txt").make_preferred();
+        EM_INFO("High scores file: {}", m_HighScoresFile.string());
+        m_Game.SetHighScores(Asteroids::HighScoreTable::Load(m_HighScoresFile));
     }
 
     // Optional loops: `ambience` under the gameplay, `music` on the game over screen, cross-faded
@@ -250,6 +323,12 @@ private:
                 s = &m_Sounds.BeatLow;
                 volume = 0.8f;
                 break;
+            case SoundEvent::SaucerFire:
+                s = &m_Sounds.SaucerFire;
+                break;
+            case SoundEvent::SaucerExplosion:
+                s = &m_Sounds.ExplosionLarge;
+                break;
             }
             if (s)
                 audio.Play(*s, {.Volume = volume, .Pan = sound.Pan});
@@ -266,17 +345,34 @@ private:
         else if (!thrusting && m_WasThrusting)
             audio.Stop(m_ThrustVoice, 120.0f);
         m_WasThrusting = thrusting;
+
+        // Saucer siren: loops while a saucer is on screen, fades out when it is destroyed, flies
+        // off or the game ends.
+        const std::optional<Asteroids::SaucerSize> saucer = m_Game.GetSaucerSize();
+        if (saucer != m_SaucerSound) {
+            audio.Stop(m_SaucerVoice, 150.0f);
+            if (saucer)
+                m_SaucerVoice =
+                    audio.Play(*saucer == Asteroids::SaucerSize::Large ? m_Sounds.SaucerLarge
+                                                                       : m_Sounds.SaucerSmall,
+                               {.Volume = 0.6f, .Loop = true, .FadeInMs = 80.0f});
+            m_SaucerSound = saucer;
+        }
     }
 
-    // "PRESS ENTER" without a gamepad, otherwise the label of the pad's South button, e.g.
-    // "PRESS CROSS" on a PS4 pad or "PRESS B" on a Switch Pro Controller.
-    void UpdateStartPrompt()
+    // Keyboard texts without a gamepad; with one, the labels printed on its buttons are added,
+    // e.g. "PRESS OPTIONS / ENTER" on a PS4 pad or "PRESS + / ENTER" on a Switch Pro Controller.
+    void UpdatePrompts()
     {
         const Emerald::Gamepads& pads = GetInput().GetGamepads();
-        std::string prompt = "PRESS ENTER";
-        if (pads.GetCount() > 0)
-            prompt = std::string("PRESS ") + pads.GetButtonLabel(GamepadButton::South);
-        m_Game.SetStartPrompt(std::move(prompt));
+        Asteroids::Prompts prompts;
+        if (pads.GetCount() > 0) {
+            const auto label = [&](GamepadButton b) { return std::string(pads.GetButtonLabel(b)); };
+            prompts.Start = "PRESS " + label(GamepadButton::Start) + " / ENTER";
+            prompts.Confirm = label(GamepadButton::South) + " / ENTER";
+            prompts.Back = label(GamepadButton::East) + " / BACKSPACE";
+        }
+        m_Game.SetPrompts(std::move(prompts));
     }
 
     Options m_Options;
@@ -285,6 +381,11 @@ private:
     Asteroids::Sounds m_Sounds;
     Emerald::VoiceHandle m_ThrustVoice;
     bool m_WasThrusting = false;
+    Emerald::VoiceHandle m_SaucerVoice;
+    std::optional<Asteroids::SaucerSize> m_SaucerSound; // which siren is playing
+    RepeatingPress m_MenuUp;
+    RepeatingPress m_MenuDown;
+    std::filesystem::path m_HighScoresFile; // empty = can't save
     static constexpr f32 kMusicVolume = 0.35f;
     f32 m_AmbienceVolume = 0.25f;
     Emerald::VoiceHandle m_MusicVoice;
@@ -308,6 +409,14 @@ Options ParseOptions(i32 argc, char** argv)
             ++i;
         } else if (arg == "--seed") {
             std::from_chars(value.data(), value.data() + value.size(), options.Seed);
+            ++i;
+        } else if (arg == "--saucer") {
+            options.Saucer = value;
+            ++i;
+        } else if (arg == "--game-over") {
+            u32 score = 0;
+            std::from_chars(value.data(), value.data() + value.size(), score);
+            options.GameOverScore = score;
             ++i;
         }
     }
