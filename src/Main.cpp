@@ -22,6 +22,8 @@
 
 namespace {
 
+using Emerald::GamepadAxis;
+using Emerald::GamepadButton;
 using Emerald::Key;
 using Emerald::Mat4;
 using Emerald::Vec2;
@@ -43,24 +45,33 @@ public:
     }
 
 protected:
-    // The controls are named actions bound to keys; the rest of the code only uses the names,
-    // so remapping a key is one line here (or a RebindAction call at runtime).
+    // The controls are named actions bound to keys and gamepad inputs; the rest of the code only
+    // uses the names, so remapping is one line here (or a RebindAction call at runtime). Gamepad
+    // buttons are named by position (South = A / Cross / B on Switch), so this works for Xbox,
+    // PlayStation and Switch pads alike.
     void OnStart() override
     {
         Emerald::Input& input = GetInput();
         input.BindAxis("Rotate", Key::A, Key::D);
         input.BindAxis("Rotate", Key::Left, Key::Right);
+        input.BindAxis("Rotate", GamepadAxis::LeftX); // analog: a half-tilted stick turns slower
+        input.BindAxis("Rotate", GamepadButton::DPadLeft, GamepadButton::DPadRight);
         input.BindAction("Thrust", {Key::W, Key::Up});
+        input.BindAction("Thrust", {GamepadButton::LeftStickUp, GamepadButton::RightTrigger,
+                                    GamepadButton::DPadUp});
         input.BindAction("Fire", {Key::Space});
+        input.BindAction("Fire", {GamepadButton::South, GamepadButton::RightShoulder});
         input.BindAction("Hyperspace", {Key::LeftShift, Key::RightShift});
+        input.BindAction("Hyperspace", {GamepadButton::North});
         input.BindAction("Start", {Key::Enter});
+        input.BindAction("Start", {GamepadButton::Start, GamepadButton::South});
         input.BindAction("Quit", {Key::Escape});
     }
 
     void OnFixedUpdate(f32 dt) override
     {
         // Translate actions into game input. "Pressed" is true for one fixed step per press.
-        const Emerald::Input& in = GetInput();
+        Emerald::Input& in = GetInput();
         Asteroids::GameInput input;
         input.Ship.Rotate = in.GetAxis("Rotate");
         input.Ship.Thrust = in.IsActionDown("Thrust");
@@ -68,12 +79,19 @@ protected:
         input.HyperspacePressed = in.WasActionPressed("Hyperspace");
         input.StartPressed = in.WasActionPressed("Start");
         m_Game.Update(input, dt);
+
+        // A short, heavy rumble when the ship is destroyed.
+        if (m_Game.GetShipsLost() != m_ShipsLost) {
+            m_ShipsLost = m_Game.GetShipsLost();
+            in.Rumble(0.8f, 0.4f, 300);
+        }
     }
 
     void OnUpdate(f32 /*dt*/) override
     {
         if (GetInput().WasActionPressed("Quit"))
             Quit();
+        UpdateStartPrompt();
 
         // For --screenshot: capture the last frame of a --frames run (or frame 120 otherwise).
         const u64 shotFrame = m_Options.Frames != 0 ? m_Options.Frames : 120;
@@ -124,13 +142,30 @@ protected:
         ImGui::Text("Score %u, lives %u%s", m_Game.GetScore(), m_Game.GetLives(),
                     m_Game.IsGameOver() ? " (game over)" : "");
         ImGui::Text("Lines drawn: %u", GetRenderer2D().GetLastFrameLineCount());
+        const Emerald::Gamepads& pads = GetInput().GetGamepads();
+        for (usize i = 0; i < pads.GetCount(); ++i)
+            ImGui::Text("Pad: %s (%s)", pads.GetInfo(i).Name.c_str(),
+                        Emerald::GetGamepadTypeName(pads.GetInfo(i).Type));
+        ImGui::Text("Rotate %+.2f", static_cast<f64>(GetInput().GetAxis("Rotate")));
         ImGui::End();
 #endif
     }
 
 private:
+    // "PRESS ENTER" without a gamepad, otherwise the label of the pad's South button, e.g.
+    // "PRESS CROSS" on a PS4 pad or "PRESS B" on a Switch Pro Controller.
+    void UpdateStartPrompt()
+    {
+        const Emerald::Gamepads& pads = GetInput().GetGamepads();
+        std::string prompt = "PRESS ENTER";
+        if (pads.GetCount() > 0)
+            prompt = std::string("PRESS ") + pads.GetButtonLabel(GamepadButton::South);
+        m_Game.SetStartPrompt(std::move(prompt));
+    }
+
     Options m_Options;
     Asteroids::Game m_Game;
+    u32 m_ShipsLost = 0;
 };
 
 Options ParseOptions(i32 argc, char** argv)

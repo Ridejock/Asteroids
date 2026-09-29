@@ -258,6 +258,7 @@ void Game::DestroyShip()
     SpawnExplosion(m_Ship.Position, 12, 120.0f);
 
     --m_Lives;
+    ++m_ShipsLost;
     EM_INFO("Ship destroyed, {} left (score {})", m_Lives, m_Score);
     if (m_Lives == 0) {
         m_State = State::GameOver;
@@ -333,9 +334,9 @@ void Game::DrawHud(Emerald::Renderer2D& r) const
     const f32 centerX = kPlayfieldCenter.x;
     if (m_State == State::GameOver) {
         VectorFont::DrawTextCentered(r, "GAME OVER", centerX, 280.0f, 54.0f, kTextColor);
-        // "PRESS ENTER" blinks slowly.
+        // The start prompt ("PRESS ENTER") blinks slowly.
         if (std::fmod(m_Time, 1.2f) < 0.8f)
-            VectorFont::DrawTextCentered(r, "PRESS ENTER", centerX, 380.0f, 24.0f, kTextColor);
+            VectorFont::DrawTextCentered(r, m_StartPrompt, centerX, 380.0f, 24.0f, kTextColor);
     } else if (m_WaveBannerTimer > 0.0f) {
         VectorFont::DrawTextCentered(r, "WAVE " + std::to_string(m_Wave), centerX, 200.0f, 30.0f,
                                      kTextColor);

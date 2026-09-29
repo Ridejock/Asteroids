@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <Emerald/Core/Defines.h>
@@ -37,6 +39,10 @@ public:
     [[nodiscard]] u32 GetWave() const { return m_Wave; }
     [[nodiscard]] usize GetAsteroidCount() const { return m_Asteroids.size(); }
     [[nodiscard]] bool IsGameOver() const { return m_State == State::GameOver; }
+    // Counts every destroyed ship, so the app can react (e.g. rumble) when it changes.
+    [[nodiscard]] u32 GetShipsLost() const { return m_ShipsLost; }
+    // Text shown on the game over screen (depends on keyboard vs. gamepad).
+    void SetStartPrompt(std::string prompt) { m_StartPrompt = std::move(prompt); }
 
 private:
     enum class State { Playing, GameOver };
@@ -83,6 +89,8 @@ private:
     u32 m_Score = 0;
     u32 m_Lives = 0;
     u32 m_Wave = 0;
+    u32 m_ShipsLost = 0;
+    std::string m_StartPrompt = "PRESS ENTER";
     u32 m_NextExtraLife = 0;      // score at which the next extra ship is awarded
     f32 m_NextWaveTimer = 0.0f;   // > 0 while waiting to start the next wave
     f32 m_WaveBannerTimer = 0.0f; // > 0 while "WAVE n" is shown
