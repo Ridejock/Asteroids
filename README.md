@@ -9,16 +9,21 @@ Emerald's `Renderer2D`; there are no textures or font files.
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| **A / D** or **← / →** | Rotate left / right |
-| **W** or **↑** | Thrust |
-| **Space** | Fire (at most 4 shots on screen) |
-| **Shift** | Hyperspace: jump to a random spot (1 s cooldown) |
-| **Enter** | Restart after *Game Over* |
-| **Esc** | Quit |
+| Action | Keyboard | Gamepad (Xbox / PlayStation / Switch Pro) |
+|---|---|---|
+| Rotate left / right | **A / D** or **← / →** | **left stick** (analog: tilt a little to turn slowly) or **d-pad ← / →** |
+| Thrust | **W** or **↑** | **left stick up**, **right trigger** (RT / R2 / ZR) or **d-pad ↑** |
+| Fire (at most 4 shots on screen) | **Space** | **South** (A / Cross / B) or **right shoulder** (RB / R1 / R) |
+| Hyperspace: jump to a random spot (1 s cooldown) | **Shift** | **North** (Y / Triangle / X) |
+| Restart after *Game Over* | **Enter** | **Start** (Menu / Options / +) or **South** |
+| Quit | **Esc** | – |
 
-The keys are bound to named input actions (`Rotate` axis, `Thrust`, `Fire`, `Hyperspace`, `Start`,
+Gamepad buttons are bound by position, so South is the bottom face button on every pad: A on Xbox,
+Cross on PlayStation, B on a Switch Pro Controller (the game over screen shows the right name,
+e.g. "PRESS CROSS"). Any connected pad works (USB or Bluetooth, plugged in at any time), and the pad
+rumbles briefly when your ship is destroyed. Stick deadzone: 20% (radial).
+
+The inputs are bound to named actions (`Rotate` axis, `Thrust`, `Fire`, `Hyperspace`, `Start`,
 `Quit`) in `AsteroidsApp::OnStart` in `src/Main.cpp`; change a binding there, or at runtime with
 `GetInput().RebindAction(...)`.
 
