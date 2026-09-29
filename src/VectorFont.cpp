@@ -54,6 +54,20 @@ std::string_view GlyphStrokes(char c)
     case 'Y': return "002340 2326";
     case 'Z': return "00400646";
     case '-': return "0343";
+    case '+': return "0343 2125";
+    case '=': return "0242 0444";
+    case '_': return "0646";
+    case '.': return "2526";
+    case ',': return "2516";
+    case ':': return "2122 2425";
+    case '!': return "2024 2526";
+    case '?': return "0040422224 2526";
+    case '/': return "0640";
+    case '<': return "400346";
+    case '>': return "004306";
+    case '\'': return "2021";
+    case '(': return "30121436";
+    case ')': return "10323416";
     default: return "";
     }
     // clang-format on
