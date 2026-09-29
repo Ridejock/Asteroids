@@ -16,6 +16,7 @@ Emerald's `Renderer2D`; there are no textures or font files.
 | Fire (at most 4 shots on screen) | **Space** | **South** (A / Cross / B) or **right shoulder** (RB / R1 / R) |
 | Hyperspace: jump to a random spot (1 s cooldown) | **Shift** | **North** (Y / Triangle / X) |
 | Restart after *Game Over* | **Enter** | **Start** (Menu / Options / +) or **South** |
+| Mute / unmute sound | **M** | **Back** (View / Share / −) |
 | Quit | **Esc** | – |
 
 Gamepad buttons are bound by position, so South is the bottom face button on every pad: A on Xbox,
@@ -24,8 +25,28 @@ e.g. "PRESS CROSS"). Any connected pad works (USB or Bluetooth, plugged in at an
 rumbles briefly when your ship is destroyed. Stick deadzone: 20% (radial).
 
 The inputs are bound to named actions (`Rotate` axis, `Thrust`, `Fire`, `Hyperspace`, `Start`,
-`Quit`) in `AsteroidsApp::OnStart` in `src/Main.cpp`; change a binding there, or at runtime with
+`Mute`, `Quit`) in `AsteroidsApp::OnStart` in `src/Main.cpp`; change a binding there, or at runtime with
 `GetInput().RebindAction(...)`.
+
+## Sound
+
+Every sound is generated when the game starts (Emerald's `Synth`, see `src/Sounds.cpp`); there are
+no audio files.
+
+| Sound | When | How it is made |
+|---|---|---|
+| Fire | each shot | square wave sweeping 1400 → 350 Hz, fast decay |
+| Thrust | while the engine fires | dark lowpassed noise, seamless 1 s loop; fades in (40 ms) and out (120 ms), stops on death and game over |
+| Explosions | rock destroyed | noise bursts falling in pitch; large rocks lower and longer (1 s), small ones brighter and shorter (0.45 s) |
+| Ship explosion | ship destroyed | long noise crash plus a falling sine rumble (1.6 s) |
+| Extra life | every 10,000 points | four quick 1.5 kHz beeps |
+| Hyperspace | jump | noise whoosh rising in pitch |
+| Heartbeat | during a wave | the classic two alternating low thumps; 1 beat per second at the start of a wave, speeding up to 4 per second as the rocks are destroyed; restarts with each wave, silent between waves and on the game over screen |
+
+Sounds are panned by where they happen on screen. **M** (or the pad's Back button) mutes; the
+debug-full build's ImGui panel has a master volume slider and mute checkbox. The game logic only
+reports sound events (`Game::GetSounds`); `AsteroidsApp::PlayGameSounds` in `src/Main.cpp` plays
+them.
 
 ## Rules
 
@@ -129,8 +150,9 @@ commit, clear the variable: `-DASTEROIDS_EMERALD_SOURCE_DIR=`.)
 
 | File | What it does |
 |---|---|
-| `src/Main.cpp` | The `Emerald::Application`: binds the controls as input actions in `OnStart`, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window and draws it in `OnRender2D` |
-| `src/Game.h/.cpp` | Game state and rules: waves, bullets, collisions, lives, score, explosions, HUD |
+| `src/Main.cpp` | The `Emerald::Application`: binds the controls as input actions in `OnStart`, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window and draws it in `OnRender2D`; plays the game's sound events and the thrust loop |
+| `src/Game.h/.cpp` | Game state and rules: waves, bullets, collisions, lives, score, explosions, HUD, sound events and the heartbeat timing |
+| `src/Sounds.h/.cpp` | All sound effects, generated at startup with Emerald's `Synth` |
 | `src/Ship.h/.cpp` | Ship movement (rotation, thrust with inertia and drag) and its outline + flame |
 | `src/Asteroid.h/.cpp` | Random jagged rocks, sizes, splitting, points |
 | `src/Bullet.h` | Bullet data and limits |
