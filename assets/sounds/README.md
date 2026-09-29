@@ -18,6 +18,9 @@ Name each file `<name>.mp3` or `<name>.wav` (if both exist, the `.mp3` is used):
 | `beat1` | heartbeat, first tone | |
 | `beat2` | heartbeat, second tone | |
 | `hyperspace` | hyperspace jump | |
+| `saucer_large` | large saucer siren | looped while it is on screen: use a clip that loops seamlessly |
+| `saucer_small` | small saucer siren | looped while it is on screen: use a clip that loops seamlessly |
+| `saucer_fire` | saucer shot | |
 | `music` | *(nothing by default)* | loops on the game over screen, never during play |
 | `ambience` | *(nothing by default)* | loops quietly (25%) under the gameplay, stops on game over |
 
