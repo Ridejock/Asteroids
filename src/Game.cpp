@@ -22,6 +22,22 @@ constexpr f32 kHyperspaceCooldown = 1.0f;
 constexpr f32 kNextWaveDelay = 2.0f;
 constexpr f32 kWaveBannerTime = 2.0f;
 constexpr f32 kSafeSpawnDistance = 220.0f; // new asteroids never appear this close to the ship
+constexpr f32 kSlowestBeat = 1.0f;         // seconds between beats at the start of a wave
+constexpr f32 kFastestBeat = 0.25f;        // ... with (almost) nothing left
+constexpr f32 kFirstBeatDelay = 0.6f;
+
+// A large rock is itself plus 2 medium plus 4 small: 7 "rocks of mass" left to destroy.
+u32 MassOf(AsteroidSize size)
+{
+    switch (size) {
+    case AsteroidSize::Large:
+        return 7;
+    case AsteroidSize::Medium:
+        return 3;
+    default:
+        return 1;
+    }
+}
 
 const Vec4 kShipColor{0.95f, 0.97f, 1.0f, 1.0f};
 const Vec4 kAsteroidColor{0.78f, 0.83f, 0.9f, 1.0f};
@@ -71,6 +87,10 @@ void Game::StartWave()
         } while (Emerald::Length(WrappedDelta(position, m_Ship.Position)) < kSafeSpawnDistance);
         m_Asteroids.push_back(MakeAsteroid(m_Random, AsteroidSize::Large, Wrap(position)));
     }
+    // The heartbeat starts slow again with every wave.
+    m_WaveMass = count * MassOf(AsteroidSize::Large);
+    m_BeatTimer = kFirstBeatDelay;
+    m_BeatHigh = true;
     EM_INFO("Wave {}: {} asteroids", m_Wave, count);
 }
 
@@ -84,8 +104,10 @@ void Game::Update(const GameInput& input, f32 dt)
     if (m_State == State::Playing)
         UpdateShip(input, dt);
     UpdateObjects(dt); // asteroids keep drifting on the game over screen
-    if (m_State == State::Playing)
+    if (m_State == State::Playing) {
         HandleCollisions();
+        UpdateHeartbeat(dt);
+    }
 
     // Next wave once the field is clear.
     m_WaveBannerTimer = Emerald::Max(m_WaveBannerTimer - dt, 0.0f);
@@ -133,6 +155,7 @@ void Game::FireBullet()
     bullet.Position = m_Ship.NosePosition();
     bullet.Velocity = m_Ship.Velocity + m_Ship.Forward() * Bullet::kSpeed;
     m_Bullets.push_back(bullet);
+    PlaySound(SoundEvent::Fire, bullet.Position);
 }
 
 void Game::Hyperspace()
@@ -141,6 +164,7 @@ void Game::Hyperspace()
         return;
     // Vanish in a puff and reappear somewhere random, at rest. Might land next to a rock!
     SpawnExplosion(m_Ship.Position, 8, 60.0f);
+    PlaySound(SoundEvent::Hyperspace, m_Ship.Position);
     m_Ship.Position = {m_Random.Float(0.0f, kPlayfieldSize.x),
                        m_Random.Float(0.0f, kPlayfieldSize.y)};
     m_Ship.Velocity = {};
@@ -221,6 +245,11 @@ void Game::HandleCollisions()
             }
         }
         SpawnExplosion(asteroid.Position, 6 + 4 * (2 - static_cast<u32>(asteroid.Size)), 90.0f);
+        const SoundEvent boom = asteroid.Size == AsteroidSize::Large ? SoundEvent::ExplosionLarge
+                                : asteroid.Size == AsteroidSize::Medium
+                                    ? SoundEvent::ExplosionMedium
+                                    : SoundEvent::ExplosionSmall;
+        PlaySound(boom, asteroid.Position);
         m_Asteroids[i] = m_Asteroids.back();
         m_Asteroids.pop_back();
     }
@@ -234,6 +263,7 @@ void Game::AddScore(u32 points)
     if (m_Score >= m_NextExtraLife) {
         ++m_Lives;
         m_NextExtraLife += kExtraLifeEvery;
+        PlaySound(SoundEvent::ExtraLife, kPlayfieldCenter);
         EM_INFO("Extra ship at {} points", m_Score);
     }
 }
@@ -256,6 +286,7 @@ void Game::DestroyShip()
         m_Particles.push_back(p);
     }
     SpawnExplosion(m_Ship.Position, 12, 120.0f);
+    PlaySound(SoundEvent::ShipExplosion, m_Ship.Position);
 
     --m_Lives;
     ++m_ShipsLost;
@@ -266,6 +297,36 @@ void Game::DestroyShip()
     } else {
         m_RespawnTimer = kRespawnDelay;
     }
+}
+
+void Game::PlaySound(SoundEvent event, const Vec2& position)
+{
+    // Pan by the horizontal position, but never fully to one side.
+    const f32 pan = (position.x / kPlayfieldSize.x * 2.0f - 1.0f) * 0.6f;
+    m_Sounds.push_back({event, pan});
+}
+
+void Game::UpdateHeartbeat(f32 dt)
+{
+    if (m_State != State::Playing || m_Asteroids.empty())
+        return; // quiet between waves and on the game over screen (also in the step the
+                // last ship died)
+    m_BeatTimer -= dt;
+    if (m_BeatTimer > 0.0f)
+        return;
+    PlaySound(m_BeatHigh ? SoundEvent::BeatHigh : SoundEvent::BeatLow, kPlayfieldCenter);
+    m_BeatHigh = !m_BeatHigh;
+    m_BeatTimer += GetBeatInterval();
+}
+
+f32 Game::GetBeatInterval() const
+{
+    // From kSlowestBeat with the whole wave left down to kFastestBeat with nothing left.
+    u32 mass = 0;
+    for (const Asteroid& asteroid : m_Asteroids)
+        mass += MassOf(asteroid.Size);
+    const f32 left = Emerald::Min(static_cast<f32>(mass) / static_cast<f32>(m_WaveMass), 1.0f);
+    return kFastestBeat + (kSlowestBeat - kFastestBeat) * left;
 }
 
 void Game::SpawnExplosion(const Vec2& position, u32 dots, f32 speed)

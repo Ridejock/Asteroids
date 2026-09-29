@@ -19,6 +19,7 @@
 
 #include "Game.h"
 #include "Playfield.h"
+#include "Sounds.h"
 
 namespace {
 
@@ -65,7 +66,11 @@ protected:
         input.BindAction("Hyperspace", {GamepadButton::North});
         input.BindAction("Start", {Key::Enter});
         input.BindAction("Start", {GamepadButton::Start, GamepadButton::South});
+        input.BindAction("Mute", {Key::M});
+        input.BindAction("Mute", {GamepadButton::Back});
         input.BindAction("Quit", {Key::Escape});
+
+        m_Sounds = Asteroids::MakeSounds(); // all generated, takes a few milliseconds
     }
 
     void OnFixedUpdate(f32 dt) override
@@ -85,12 +90,15 @@ protected:
             m_ShipsLost = m_Game.GetShipsLost();
             in.Rumble(0.8f, 0.4f, 300);
         }
+        PlayGameSounds();
     }
 
     void OnUpdate(f32 /*dt*/) override
     {
         if (GetInput().WasActionPressed("Quit"))
             Quit();
+        if (GetInput().WasActionPressed("Mute"))
+            GetAudio().SetMuted(!GetAudio().IsMuted());
         UpdateStartPrompt();
 
         // For --screenshot: capture the last frame of a --frames run (or frame 120 otherwise).
@@ -147,11 +155,77 @@ protected:
             ImGui::Text("Pad: %s (%s)", pads.GetInfo(i).Name.c_str(),
                         Emerald::GetGamepadTypeName(pads.GetInfo(i).Type));
         ImGui::Text("Rotate %+.2f", static_cast<f64>(GetInput().GetAxis("Rotate")));
+        ImGui::Separator();
+        Emerald::Audio& audio = GetAudio();
+        f32 volume = audio.GetMasterVolume();
+        if (ImGui::SliderFloat("Master volume", &volume, 0.0f, 1.0f))
+            audio.SetMasterVolume(volume);
+        bool muted = audio.IsMuted();
+        if (ImGui::Checkbox("Muted (M)", &muted))
+            audio.SetMuted(muted);
+        ImGui::Text("Audio: %s, %zu voices playing", audio.IsAvailable() ? "on" : "no device",
+                    audio.GetPlayingCount());
         ImGui::End();
 #endif
     }
 
 private:
+    // Plays what the game asked for this step, and starts/stops the looping thrust sound.
+    void PlayGameSounds()
+    {
+        Emerald::Audio& audio = GetAudio();
+        for (const Asteroids::GameSound& sound : m_Game.GetSounds()) {
+            using Asteroids::SoundEvent;
+            const Emerald::Sound* s = nullptr;
+            f32 volume = 1.0f;
+            switch (sound.Event) {
+            case SoundEvent::Fire:
+                s = &m_Sounds.Fire;
+                break;
+            case SoundEvent::ExplosionLarge:
+                s = &m_Sounds.ExplosionLarge;
+                break;
+            case SoundEvent::ExplosionMedium:
+                s = &m_Sounds.ExplosionMedium;
+                break;
+            case SoundEvent::ExplosionSmall:
+                s = &m_Sounds.ExplosionSmall;
+                break;
+            case SoundEvent::ShipExplosion:
+                s = &m_Sounds.ShipExplosion;
+                break;
+            case SoundEvent::ExtraLife:
+                s = &m_Sounds.ExtraLife;
+                break;
+            case SoundEvent::Hyperspace:
+                s = &m_Sounds.Hyperspace;
+                break;
+            case SoundEvent::BeatHigh:
+                s = &m_Sounds.BeatHigh;
+                volume = 0.8f;
+                break;
+            case SoundEvent::BeatLow:
+                s = &m_Sounds.BeatLow;
+                volume = 0.8f;
+                break;
+            }
+            if (s)
+                audio.Play(*s, {.Volume = volume, .Pan = sound.Pan});
+        }
+        m_Game.ClearSounds();
+
+        // Thrust loop: fades in when the engine fires, fades out when it stops (also on death and
+        // game over, since IsThrusting is false then).
+        // On every start a new voice: the previous one may still be fading out.
+        const bool thrusting = m_Game.IsThrusting();
+        if (thrusting && !m_WasThrusting)
+            m_ThrustVoice =
+                audio.Play(m_Sounds.Thrust, {.Volume = 0.45f, .Loop = true, .FadeInMs = 40.0f});
+        else if (!thrusting && m_WasThrusting)
+            audio.Stop(m_ThrustVoice, 120.0f);
+        m_WasThrusting = thrusting;
+    }
+
     // "PRESS ENTER" without a gamepad, otherwise the label of the pad's South button, e.g.
     // "PRESS CROSS" on a PS4 pad or "PRESS B" on a Switch Pro Controller.
     void UpdateStartPrompt()
@@ -166,6 +240,9 @@ private:
     Options m_Options;
     Asteroids::Game m_Game;
     u32 m_ShipsLost = 0;
+    Asteroids::Sounds m_Sounds;
+    Emerald::VoiceHandle m_ThrustVoice;
+    bool m_WasThrusting = false;
 };
 
 Options ParseOptions(i32 argc, char** argv)

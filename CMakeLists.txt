@@ -39,7 +39,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        a3c045070c5983af17387dd4175c7bf161ec72c1
+    GIT_TAG        6057aa9b2d025e7178939aa02ca6a8005d74b96c
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
@@ -60,6 +60,8 @@ add_executable(Asteroids
     src/VectorFont.h
     src/Playfield.h
     src/Random.h
+    src/Sounds.cpp
+    src/Sounds.h
 )
 target_link_libraries(Asteroids PRIVATE Emerald::Emerald)
 
