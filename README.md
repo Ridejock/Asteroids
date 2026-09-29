@@ -44,7 +44,27 @@ no audio files.
 | Heartbeat | during a wave | the classic two alternating low thumps; 1 beat per second at the start of a wave, speeding up to 4 per second as the rocks are destroyed; restarts with each wave, silent between waves and on the game over screen |
 
 Sounds are panned by where they happen on screen. **M** (or the pad's Back button) mutes; the
-debug-full build's ImGui panel has a master volume slider and mute checkbox. The game logic only
+debug-full build's ImGui panel has master and ambience volume sliders, a mute checkbox and the list
+of loaded overrides.
+
+### Your own sounds (optional)
+
+Any sound can be replaced by a file of your own, without changing code, and the repository never
+contains such files. Put `<name>.mp3` or `<name>.wav` into `assets/sounds/` in the source tree (the
+build copies that folder next to the executable) or directly into `build/<preset>/bin/assets/sounds/`:
+
+`fire`, `thrust`, `bang_large`, `bang_medium`, `bang_small`, `ship_explode`, `extra_life`, `beat1`,
+`beat2`, `hyperspace`, plus two extras with no generated version:
+
+- `music` loops on the game over screen only (fades in over 1.5 s, out when a new game starts).
+- `ambience` loops quietly (25%, adjustable in the debug panel) under the gameplay and the
+  heartbeat; it fades in when a game starts and out on game over.
+
+Missing files keep the generated sound, and the log lists what was loaded (`Sound overrides from
+...: fire, ambience`). Each file is scaled to the peak level of the sound it replaces (music and
+ambience to 0.8), so full-scale clips do not drown out the rest. A `thrust` file is looped, so it
+should loop seamlessly. `assets/sounds/*` is in `.gitignore` except its `README.md`, which lists the
+names too. The game logic only
 reports sound events (`Game::GetSounds`); `AsteroidsApp::PlayGameSounds` in `src/Main.cpp` plays
 them.
 
@@ -97,6 +117,12 @@ cmake --build --preset debug
 ```
 
 (On Linux, SDL3 needs the usual X11/Wayland development packages; see Emerald's README.)
+
+Tests (the sound override loader; `ASTEROIDS_BUILD_TESTS`, on by default):
+
+```sh
+ctest --test-dir build/debug --output-on-failure
+```
 
 ### Presets
 
@@ -152,7 +178,8 @@ commit, clear the variable: `-DASTEROIDS_EMERALD_SOURCE_DIR=`.)
 |---|---|
 | `src/Main.cpp` | The `Emerald::Application`: binds the controls as input actions in `OnStart`, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window and draws it in `OnRender2D`; plays the game's sound events and the thrust loop |
 | `src/Game.h/.cpp` | Game state and rules: waves, bullets, collisions, lives, score, explosions, HUD, sound events and the heartbeat timing |
-| `src/Sounds.h/.cpp` | All sound effects, generated at startup with Emerald's `Synth` |
+| `src/Sounds.h/.cpp` | All sound effects, generated at startup with Emerald's `Synth`; optional file overrides (`LoadOverrides`) |
+| `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |
 | `src/Ship.h/.cpp` | Ship movement (rotation, thrust with inertia and drag) and its outline + flame |
 | `src/Asteroid.h/.cpp` | Random jagged rocks, sizes, splitting, points |
 | `src/Bullet.h` | Bullet data and limits |
