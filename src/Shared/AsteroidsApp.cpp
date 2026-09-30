@@ -22,7 +22,7 @@
 #include "GameInfo.h"
 #include "Icon.h"
 #include "Playfield.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids {
 
@@ -443,7 +443,7 @@ void AsteroidsApp::OnImGui()
     ImGui::Text("FPS: %.0f", static_cast<f64>(ImGui::GetIO().Framerate));
     ImGui::Text("Fixed update: %.0f Hz", static_cast<f64>(1.0f / GetFixedDeltaSeconds()));
     ImGui::Text("Wave %u, %zu asteroids", m_Game->GetWave(), m_Game->GetAsteroidCount());
-    ImGui::Text("Score %u, lives %u%s", m_Game->GetScore(), m_Game->GetLives(),
+    ImGui::Text("Score %u, ships lost %u%s", m_Game->GetScore(), m_Game->GetShipsLost(),
                 m_Game->IsGameOver() ? " (game over)" : "");
     const Emerald::Renderer2D& r2d = GetRenderer2D();
     ImGui::Text("Particles: %u / %u", m_Effects.GetParticles().GetCount(),
@@ -840,14 +840,13 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
                                       "",
                                       ""};
         m_OptionsMenu.Draw(r, "OPTIONS", 130.0f, values, m_MenuTime);
-        VectorFont::DrawTextCentered(r, "UP / DOWN: CHOOSE    LEFT / RIGHT: CHANGE    ESC: BACK",
-                                     kPlayfieldCenter.x, 600.0f, 14.0f, kMenuHint);
+        Text::DrawCentered(r, "UP / DOWN: CHOOSE    LEFT / RIGHT: CHANGE    ESC: BACK",
+                           kPlayfieldCenter.x, 600.0f, 14.0f, kMenuHint);
         break;
     }
     case Overlay::Controls:
         DrawControls(r, 190.0f, m_PadLabels);
-        VectorFont::DrawTextCentered(r, "ENTER / ESC: BACK", kPlayfieldCenter.x, 560.0f, 16.0f,
-                                     kMenuHint);
+        Text::DrawCentered(r, "ENTER / ESC: BACK", kPlayfieldCenter.x, 560.0f, 16.0f, kMenuHint);
         break;
     }
 }

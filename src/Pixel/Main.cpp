@@ -18,6 +18,7 @@
 #include "Playfield.h"
 #include "Random.h"
 #include "RogueGame.h"
+#include "Text.h"
 
 namespace {
 
@@ -65,6 +66,7 @@ public:
                        std::move(game))
     {
     }
+    ~PixelRogue() override { Text::SetStyle({}); } // before m_Fonts goes
 
     [[nodiscard]] const RogueGame& GetGame() const
     {
@@ -104,6 +106,16 @@ protected:
                      folder.string());
         }
         MakeStars();
+
+        // Text: Press Start 2P, an 8 x 8 pixel font, baked once at its native size and drawn
+        // at whole multiples with Nearest filtering (capitals only: the games draw text in caps).
+        const f32 sizes[] = {8.0f};
+        m_Fonts = Text::LoadFonts(device, "PressStart2P-Regular.ttf", sizes,
+                                  {.Ranges = {Text::kCapitalsAndSymbols},
+                                   .Oversample = 1,
+                                   .Filter = Emerald::TextureFilter::Nearest});
+        if (!m_Fonts.empty())
+            Text::SetStyle({.Fonts = Text::Pointers(m_Fonts), .PixelSizes = true});
     }
 
     void OnGameStepped() override
@@ -403,6 +415,7 @@ private:
 
     std::filesystem::path m_MetaFile; // empty = can't save
     std::optional<Emerald::TextureAtlas> m_Atlas;
+    std::vector<Emerald::Font> m_Fonts; // Text's style points at these
     std::optional<Emerald::Texture> m_White;
     Sprite m_WhiteSprite; // all of m_White
     std::array<Sprite, kShipCount> m_Ships{};

@@ -6,11 +6,13 @@
 #include <cmath>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "AsteroidsApp.h"
 #include "Game.h"
 #include "GameInfo.h"
 #include "Playfield.h"
+#include "Text.h"
 
 namespace {
 
@@ -32,6 +34,10 @@ struct GlowRing {
 constexpr GlowRing kGlowRings[] = {{1.3f, 0.22f}, {3.2f, 0.07f}};
 const Vec4 kGlowTint{0.55f, 0.8f, 1.0f, 1.0f};
 
+// Share Tech Mono (SIL Open Font License, assets/fonts/): monospaced, so its letters sit evenly
+// on the line font's grid.
+constexpr const char* kFontFile = "ShareTechMono-Regular.ttf";
+
 // Calls draw(offset, color) for the glow copies and then for the sharp line itself.
 template <typename DrawFn> void DrawGlowing(const Vec4& color, DrawFn&& draw)
 {
@@ -48,10 +54,34 @@ template <typename DrawFn> void DrawGlowing(const Vec4& color, DrawFn&& draw)
 class VectorAsteroids final : public AsteroidsApp {
 public:
     using AsteroidsApp::AsteroidsApp;
+    ~VectorAsteroids() override { Text::SetStyle({}); } // before m_Fonts goes
 
     [[nodiscard]] const Game& GetGame() const { return static_cast<const Game&>(GetMode()); }
 
 protected:
+    // Text: a TTF font, smooth (Linear) and additive with a faint halo so it glows like the
+    // lines, spaced on the line font's grid (layouts and the arcade look stay as they were).
+    // Baked at several sizes: without mipmaps a bake should not be shrunk much, and the big one
+    // keeps the title sharp.
+    void OnLoadAssets() override
+    {
+        SDL_GPUDevice* device = GetRenderer().GetDevice();
+        const Emerald::FontOptions options{.Ranges = {Text::kCapitalsAndSymbols}, .Oversample = 2};
+        const f32 small[] = {20.0f, 32.0f, 48.0f};
+        const f32 large[] = {80.0f, 140.0f}; // big enough not to need oversampling
+        m_Fonts = Text::LoadFonts(device, kFontFile, small, options);
+        std::vector<Emerald::Font> big =
+            Text::LoadFonts(device, kFontFile, large, {.Ranges = options.Ranges, .Oversample = 1});
+        if (m_Fonts.empty() || big.empty()) {
+            m_Fonts.clear(); // keep the line font
+            return;
+        }
+        for (Emerald::Font& font : big)
+            m_Fonts.push_back(std::move(font));
+        Text::SetStyle(
+            {.Fonts = Text::Pointers(m_Fonts), .Monospace = true, .Additive = true, .Halo = 0.16f});
+    }
+
     void DrawWorld(Emerald::Renderer2D& r) override
     {
         const Game& game = GetGame();
@@ -103,6 +133,9 @@ protected:
             });
         }
     }
+
+private:
+    std::vector<Emerald::Font> m_Fonts; // Text's style points at these
 };
 
 } // namespace

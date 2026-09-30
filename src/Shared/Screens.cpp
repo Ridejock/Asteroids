@@ -8,7 +8,7 @@
 #include "GameInfo.h"
 #include "GameMode.h"
 #include "Playfield.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids {
 
@@ -40,9 +40,11 @@ Page PageAt(f32 seconds, bool haveHighScores)
 
 void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 maxWidth, f32 time)
 {
-    const f32 height =
-        std::min(110.0f, maxWidth / std::max(VectorFont::TextWidth(title, 1.0f), 0.01f));
-    const f32 left = kPlayfieldCenter.x - 0.5f * VectorFont::TextWidth(title, height);
+    // As big as fits (fonts do not all scale linearly: a pixel font snaps to whole multiples).
+    f32 height = std::min(110.0f, maxWidth / std::max(Text::Width(title, 100.0f) / 100.0f, 0.01f));
+    while (!Text::UsesLineFont() && height > 10.0f && Text::Width(title, height) > maxWidth)
+        height -= 2.0f;
+    const f32 left = kPlayfieldCenter.x - 0.5f * Text::Width(title, height);
     const Vec2 topLeft{left, centerY - 0.5f * height};
 
     // Brightness: a slow breathing plus, now and then, a quick dip like an old tube.
@@ -56,22 +58,26 @@ void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 m
         const f32 a = Emerald::TwoPi * static_cast<f32>(i) / static_cast<f32>(kGlowCopies);
         for (const auto& [radius, alpha] : {std::pair{2.5f, 0.16f}, {5.0f, 0.08f}, {8.0f, 0.04f}}) {
             const Vec4 glow{0.45f, 0.8f, 1.0f, alpha * brightness};
-            VectorFont::DrawText(r, title, topLeft + Vec2(std::cos(a), std::sin(a)) * radius,
-                                 height, glow);
+            Text::Draw(r, title, topLeft + Vec2(std::cos(a), std::sin(a)) * radius, height, glow,
+                       false);
         }
     }
     const Vec4 core{0.9f, 0.97f, 1.0f, brightness};
+    if (!Text::UsesLineFont()) {
+        Text::Draw(r, title, topLeft, height, core, false); // font strokes are thick already
+        return;
+    }
     for (i32 y = -1; y <= 1; ++y)
         for (i32 x = -1; x <= 1; ++x)
-            VectorFont::DrawText(r, title, topLeft + Vec2(static_cast<f32>(x), static_cast<f32>(y)),
-                                 height, core);
+            Text::Draw(r, title, topLeft + Vec2(static_cast<f32>(x), static_cast<f32>(y)), height,
+                       core);
 }
 
 void DrawCover(Emerald::Renderer2D& r, const GameInfo::Edition& edition, f32 time)
 {
     DrawLogo(r, edition.Title, kPlayfieldCenter.y - 30.0f, 800.0f, time);
-    VectorFont::DrawTextCentered(r, edition.Tagline, kPlayfieldCenter.x, kPlayfieldCenter.y + 70.0f,
-                                 24.0f, kDim);
+    Text::DrawCentered(r, edition.Tagline, kPlayfieldCenter.x, kPlayfieldCenter.y + 70.0f, 24.0f,
+                       kDim);
 }
 
 void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMode& game, Page page,
@@ -83,10 +89,9 @@ void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMo
     switch (page) {
     case Page::PressStart:
         if (std::fmod(time, 1.2f) < 0.8f)
-            VectorFont::DrawTextCentered(r, startPrompt, centerX, 400.0f, 28.0f, kText);
-        VectorFont::DrawTextCentered(r, "ESC: MENU", centerX, 470.0f, 18.0f, kDim);
-        VectorFont::DrawTextCentered(r, "MADE WITH EMERALD AND SDL3", centerX, 600.0f, 16.0f,
-                                     kFaint);
+            Text::DrawCentered(r, startPrompt, centerX, 400.0f, 28.0f, kText);
+        Text::DrawCentered(r, "ESC: MENU", centerX, 470.0f, 18.0f, kDim);
+        Text::DrawCentered(r, "MADE WITH EMERALD AND SDL3", centerX, 600.0f, 16.0f, kFaint);
         break;
     case Page::HighScores:
         game.DrawHighScoreTable(r, 300.0f);
@@ -97,11 +102,10 @@ void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMo
     }
 
     // Footer: copyright on the left, version on the right.
-    VectorFont::DrawText(r, GameInfo::kCopyright, {40.0f, 684.0f}, 14.0f, kFaint);
+    Text::Draw(r, GameInfo::kCopyright, {40.0f, 684.0f}, 14.0f, kFaint);
     const std::string version = std::string("V") + GameInfo::kVersion;
-    VectorFont::DrawText(r, version,
-                         {kPlayfieldSize.x - 40.0f - VectorFont::TextWidth(version, 14.0f), 684.0f},
-                         14.0f, kFaint);
+    Text::Draw(r, version, {kPlayfieldSize.x - 40.0f - Text::Width(version, 14.0f), 684.0f}, 14.0f,
+               kFaint);
 }
 
 } // namespace TitleScreen
@@ -125,13 +129,13 @@ void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad)
     };
 
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "CONTROLS", centerX, top, 24.0f, kText);
+    Text::DrawCentered(r, "CONTROLS", centerX, top, 24.0f, kText);
     // Fixed-width columns (monospaced font), centered as a block.
     for (usize i = 0; i < std::size(rows); ++i) {
         std::string line = PadRight(rows[i].Action, 12) + PadRight(rows[i].Keys, 16);
         line += hasPad ? PadRight(rows[i].Pad, 10) : std::string();
-        VectorFont::DrawTextCentered(r, line, centerX, top + 50.0f + 34.0f * static_cast<f32>(i),
-                                     18.0f, kText);
+        Text::DrawCentered(r, line, centerX, top + 50.0f + 34.0f * static_cast<f32>(i), 18.0f,
+                           kText);
     }
 }
 

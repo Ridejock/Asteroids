@@ -5,7 +5,7 @@
 #include <string>
 
 #include "Playfield.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids {
 
@@ -42,7 +42,7 @@ void Menu::Draw(Emerald::Renderer2D& r, std::string_view title, f32 top,
                 std::span<const std::string> values, f32 time) const
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, title, centerX, top, kTitleHeight, kBright);
+    Text::DrawCentered(r, title, centerX, top, kTitleHeight, kBright);
 
     const bool anyValues = !values.empty();
     for (usize i = 0; i < m_Items.size(); ++i) {
@@ -56,13 +56,13 @@ void Menu::Draw(Emerald::Renderer2D& r, std::string_view title, f32 top,
         }
         const f32 y = top + kTitleHeight + 40.0f + kRowSpacing * static_cast<f32>(i);
         const bool selected = i == m_Selected;
-        VectorFont::DrawTextCentered(r, row, centerX, y, kItemHeight, selected ? kBright : kDim);
+        Text::DrawCentered(r, row, centerX, y, kItemHeight, selected ? kBright : kDim);
         if (selected) {
             // Pulsing arrows either side of the selected row.
-            const f32 half = 0.5f * VectorFont::TextWidth(row, kItemHeight);
+            const f32 half = 0.5f * Text::Width(row, kItemHeight);
             const f32 nudge = 4.0f * std::sin(time * 6.0f);
-            VectorFont::DrawText(r, ">", {centerX - half - 44.0f + nudge, y}, kItemHeight, kBright);
-            VectorFont::DrawText(r, "<", {centerX + half + 28.0f - nudge, y}, kItemHeight, kBright);
+            Text::Draw(r, ">", {centerX - half - 44.0f + nudge, y}, kItemHeight, kBright);
+            Text::Draw(r, "<", {centerX + half + 28.0f - nudge, y}, kItemHeight, kBright);
         }
     }
 }

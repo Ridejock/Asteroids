@@ -7,7 +7,7 @@
 #include <Emerald/Math/Common.h>
 
 #include "Playfield.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids::Rogue {
 
@@ -50,7 +50,7 @@ std::vector<std::string> WrapText(std::string_view text, f32 height, f32 width)
         text.remove_prefix(std::min(space + 1, text.size()));
         const std::string candidate =
             line.empty() ? std::string(word) : line + " " + std::string(word);
-        if (!line.empty() && VectorFont::TextWidth(candidate, height) > width) {
+        if (!line.empty() && Text::Width(candidate, height) > width) {
             lines.push_back(line);
             line = std::string(word);
         } else {
@@ -1350,11 +1350,10 @@ void RogueGame::DrawPlayHud(Emerald::Renderer2D& r) const
     const f32 centerX = kPlayfieldCenter.x;
     const std::string score =
         m_Score < 10 ? "0" + std::to_string(m_Score) : std::to_string(m_Score);
-    VectorFont::DrawText(r, score, {40.0f, 24.0f}, 30.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, m_Stage.Label(), centerX, 22.0f, 16.0f, kDimTextColor);
+    Text::Draw(r, score, {40.0f, 24.0f}, 30.0f, kTextColor);
+    Text::DrawCentered(r, m_Stage.Label(), centerX, 22.0f, 16.0f, kDimTextColor);
     const std::string scrap = "SCRAP " + std::to_string(m_RunScrap);
-    VectorFont::DrawText(r, scrap, {1240.0f - VectorFont::TextWidth(scrap, 18.0f), 28.0f}, 18.0f,
-                         kWarm);
+    Text::Draw(r, scrap, {1240.0f - Text::Width(scrap, 18.0f), 28.0f}, 18.0f, kWarm);
 
     // Shield charges under the score: filled = ready.
     for (u32 i = 0; i < m_Stats.ShieldCharges; ++i) {
@@ -1372,8 +1371,8 @@ void RogueGame::DrawPlayHud(Emerald::Renderer2D& r) const
         if (level == 0)
             continue;
         if (level > 1)
-            VectorFont::DrawText(r, std::to_string(level),
-                                 GetHudIconPosition(slot) + Vec2(12.0f, 2.0f), 12.0f, kTextColor);
+            Text::Draw(r, std::to_string(level), GetHudIconPosition(slot) + Vec2(12.0f, 2.0f),
+                       12.0f, kTextColor);
         ++slot;
     }
 
@@ -1381,8 +1380,7 @@ void RogueGame::DrawPlayHud(Emerald::Renderer2D& r) const
     if (m_Boss) {
         const Boss& boss = *m_Boss;
         const char* names[] = {"THE MONOLITH", "THE MOTHERSHIP", "THE BASTION"};
-        VectorFont::DrawTextCentered(r, names[static_cast<usize>(boss.Kind)], centerX, 48.0f, 16.0f,
-                                     kDanger);
+        Text::DrawCentered(r, names[static_cast<usize>(boss.Kind)], centerX, 48.0f, 16.0f, kDanger);
         constexpr Vec2 kBarSize{480.0f, 10.0f};
         const Vec2 barTop{centerX - 0.5f * kBarSize.x, 72.0f};
         const f32 fill =
@@ -1393,22 +1391,20 @@ void RogueGame::DrawPlayHud(Emerald::Renderer2D& r) const
     }
 
     if (m_BannerTimer > 0.0f && m_State == State::Playing) {
-        VectorFont::DrawTextCentered(r, m_Stage.Label(), centerX, 200.0f, 30.0f, kTextColor);
+        Text::DrawCentered(r, m_Stage.Label(), centerX, 200.0f, 30.0f, kTextColor);
         if (m_Stage.IsBoss() && std::fmod(m_Time * 3.0f, 2.0f) < 1.3f)
-            VectorFont::DrawTextCentered(r, "WARNING: BOSS APPROACHING", centerX, 250.0f, 20.0f,
-                                         kDanger);
+            Text::DrawCentered(r, "WARNING: BOSS APPROACHING", centerX, 250.0f, 20.0f, kDanger);
     }
     if (m_ClearTimer > 0.0f)
-        VectorFont::DrawTextCentered(r, m_Stage.IsBoss() ? "SECTOR CLEAR" : "WAVE CLEAR", centerX,
-                                     230.0f, 34.0f, kAccent);
+        Text::DrawCentered(r, m_Stage.IsBoss() ? "SECTOR CLEAR" : "WAVE CLEAR", centerX, 230.0f,
+                           34.0f, kAccent);
 }
 
 void RogueGame::DrawUpgradePick(Emerald::Renderer2D& r) const
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "CHOOSE AN UPGRADE", centerX, 110.0f, 34.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, "NEXT: " + m_Stage.Label(), centerX, 160.0f, 16.0f,
-                                 kDimTextColor);
+    Text::DrawCentered(r, "CHOOSE AN UPGRADE", centerX, 110.0f, 34.0f, kTextColor);
+    Text::DrawCentered(r, "NEXT: " + m_Stage.Label(), centerX, 160.0f, 16.0f, kDimTextColor);
 
     for (usize i = 0; i < m_Offers.size(); ++i) {
         const UpgradeInfo& info = GetUpgradeInfo(m_Offers[i]);
@@ -1423,34 +1419,33 @@ void RogueGame::DrawUpgradePick(Emerald::Renderer2D& r) const
             r.DrawRect(topLeft - Vec2(4.0f), Vec2(kCardWidth, kCardHeight) + Vec2(8.0f), frame);
 
         const Vec4 text = selected ? kTextColor : Vec4(0.8f, 0.82f, 0.86f, 1.0f);
-        VectorFont::DrawTextCentered(r, info.Name, cx, kCardTop + 150.0f, 20.0f, text);
+        Text::DrawCentered(r, info.Name, cx, kCardTop + 150.0f, 20.0f, text);
         const u8 level = m_Upgrades.Level(m_Offers[i]);
         const std::string levelText =
             level == 0 ? "NEW"
                        : "LEVEL " + std::to_string(level) + " > " + std::to_string(level + 1);
-        VectorFont::DrawTextCentered(r, levelText + "  (MAX " + std::to_string(info.MaxLevel) + ")",
-                                     cx, kCardTop + 185.0f, 14.0f, kWarm);
+        Text::DrawCentered(r, levelText + "  (MAX " + std::to_string(info.MaxLevel) + ")", cx,
+                           kCardTop + 185.0f, 14.0f, kWarm);
         f32 y = kCardTop + 220.0f;
         for (const std::string& line : WrapText(info.Description, 14.0f, kCardWidth - 30.0f)) {
-            VectorFont::DrawTextCentered(r, line, cx, y, 14.0f, text);
+            Text::DrawCentered(r, line, cx, y, 14.0f, text);
             y += 22.0f;
         }
     }
 
     if (m_StateTime >= kPickDelay)
-        VectorFont::DrawTextCentered(r, "LEFT / RIGHT: CHOOSE     " + m_Prompts.Confirm + ": TAKE",
-                                     centerX, 560.0f, 18.0f, kTextColor);
+        Text::DrawCentered(r, "LEFT / RIGHT: CHOOSE     " + m_Prompts.Confirm + ": TAKE", centerX,
+                           560.0f, 18.0f, kTextColor);
 }
 
 void RogueGame::DrawHangar(Emerald::Renderer2D& r) const
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "HANGAR", centerX, 40.0f, 40.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, "SCRAP: " + std::to_string(m_Meta.Scrap), centerX, 104.0f,
-                                 22.0f, kWarm);
-    VectorFont::DrawText(r, "SHIPS", {340.0f, 160.0f}, 16.0f, kDimTextColor);
-    VectorFont::DrawText(r, "UPGRADES FOR THE POOL", {340.0f, HangarRowY(kShipCount) - 36.0f},
-                         16.0f, kDimTextColor);
+    Text::DrawCentered(r, "HANGAR", centerX, 40.0f, 40.0f, kTextColor);
+    Text::DrawCentered(r, "SCRAP: " + std::to_string(m_Meta.Scrap), centerX, 104.0f, 22.0f, kWarm);
+    Text::Draw(r, "SHIPS", {340.0f, 160.0f}, 16.0f, kDimTextColor);
+    Text::Draw(r, "UPGRADES FOR THE POOL", {340.0f, HangarRowY(kShipCount) - 36.0f}, 16.0f,
+               kDimTextColor);
 
     const std::vector<HangarRow>& rows = GetHangarRows();
     std::string_view description;
@@ -1493,40 +1488,39 @@ void RogueGame::DrawHangar(Emerald::Renderer2D& r) const
             }
         }
         const Vec4 color = selected ? kTextColor : Vec4(0.75f, 0.78f, 0.82f, 1.0f);
-        VectorFont::DrawText(r, name, {440.0f, y}, 20.0f, color);
-        VectorFont::DrawText(r, status, {940.0f - VectorFont::TextWidth(status, 16.0f), y + 3.0f},
-                             16.0f, statusColor);
+        Text::Draw(r, name, {440.0f, y}, 20.0f, color);
+        Text::Draw(r, status, {940.0f - Text::Width(status, 16.0f), y + 3.0f}, 16.0f, statusColor);
         if (selected)
             r.DrawRect({340.0f, y - 10.0f}, {620.0f, kHangarRowHeight - 2.0f}, kAccent);
     }
 
     const bool message = m_HangarMessageTimer > 0.0f && !m_HangarMessage.empty();
-    VectorFont::DrawTextCentered(r, message ? std::string_view(m_HangarMessage) : description,
-                                 centerX, 640.0f, 16.0f, message ? kWarm : kTextColor);
-    VectorFont::DrawTextCentered(r, m_Prompts.Confirm + ": BUY / SELECT     ESC: BACK", centerX,
-                                 680.0f, 14.0f, kDimTextColor);
+    Text::DrawCentered(r, message ? std::string_view(m_HangarMessage) : description, centerX,
+                       640.0f, 16.0f, message ? kWarm : kTextColor);
+    Text::DrawCentered(r, m_Prompts.Confirm + ": BUY / SELECT     ESC: BACK", centerX, 680.0f,
+                       14.0f, kDimTextColor);
 }
 
 void RogueGame::DrawResults(Emerald::Renderer2D& r) const
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, m_Victory ? "ALL SECTORS CLEARED" : "SHIP DESTROYED", centerX,
-                                 44.0f, 40.0f, m_Victory ? kAccent : kDanger);
+    Text::DrawCentered(r, m_Victory ? "ALL SECTORS CLEARED" : "SHIP DESTROYED", centerX, 44.0f,
+                       40.0f, m_Victory ? kAccent : kDanger);
     const std::string reached = m_Victory ? "VICTORY" : "REACHED " + m_Stage.Label();
-    VectorFont::DrawTextCentered(r, reached, centerX, 108.0f, 18.0f, kTextColor);
-    VectorFont::DrawTextCentered(r,
-                                 "SCORE " + std::to_string(m_Score) + "     BOSSES " +
-                                     std::to_string(m_BossesDefeated) + "     UPGRADES " +
-                                     std::to_string(m_Upgrades.Total()),
-                                 centerX, 140.0f, 18.0f, kTextColor);
-    VectorFont::DrawTextCentered(r,
-                                 "SCRAP EARNED +" + std::to_string(m_ScrapEarned) + "   (TOTAL " +
-                                     std::to_string(m_Meta.Scrap) + ")",
-                                 centerX, 174.0f, 20.0f, kWarm);
+    Text::DrawCentered(r, reached, centerX, 108.0f, 18.0f, kTextColor);
+    Text::DrawCentered(r,
+                       "SCORE " + std::to_string(m_Score) + "     BOSSES " +
+                           std::to_string(m_BossesDefeated) + "     UPGRADES " +
+                           std::to_string(m_Upgrades.Total()),
+                       centerX, 140.0f, 18.0f, kTextColor);
+    Text::DrawCentered(r,
+                       "SCRAP EARNED +" + std::to_string(m_ScrapEarned) + "   (TOTAL " +
+                           std::to_string(m_Meta.Scrap) + ")",
+                       centerX, 174.0f, 20.0f, kWarm);
     if (!m_HighScores.GetEntries().empty())
         DrawHighScoreTable(r, 226.0f);
     if (m_StateTime >= kInputDelay && std::fmod(m_Time, 1.2f) < 0.8f)
-        VectorFont::DrawTextCentered(r, m_Prompts.Start, centerX, 668.0f, 22.0f, kTextColor);
+        Text::DrawCentered(r, m_Prompts.Start, centerX, 668.0f, 22.0f, kTextColor);
 }
 
 } // namespace Asteroids::Rogue

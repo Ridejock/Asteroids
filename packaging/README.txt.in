@@ -53,6 +53,7 @@ Every sound is synthesized by the game while it starts; there are no recordings.
 
 Made with the Emerald engine (https://github.com/Ridejock/Emerald) on top of SDL3
 (https://libsdl.org). Also uses spdlog, {fmt}, stb, dr_mp3 and nlohmann/json.
+Font: Share Tech Mono by Carrois Type Design, under the SIL Open Font License 1.1 (assets/fonts/).
 
 @GAME_TITLE@ is (C) 2026 Ervin Ashley and released under the MIT License, see LICENSE.txt.
-The licenses of the libraries it uses are in THIRD_PARTY_LICENSES.txt.
+The licenses of the libraries and the font it uses are in THIRD_PARTY_LICENSES.txt.

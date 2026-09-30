@@ -78,7 +78,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        b01c43a93c179cd673840552a7a61b1d714dde86
+    GIT_TAG        fe1847b559633f3c31acaa5cb5b14807b7167864
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
@@ -116,6 +116,8 @@ add_library(AsteroidsShared STATIC
     src/Shared/HighScores.h
     src/Shared/Saucer.cpp
     src/Shared/Saucer.h
+    src/Shared/Text.cpp
+    src/Shared/Text.h
     src/Shared/VectorFont.cpp
     src/Shared/VectorFont.h
     src/Shared/Playfield.h
@@ -228,6 +230,8 @@ if(ASTEROIDS_BUILD_TESTS)
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)
     add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
     add_test(NAME MenusAndSettings COMMAND AsteroidsMenuTests)
+    target_compile_definitions(AsteroidsMenuTests PRIVATE
+        ASTEROIDS_FONTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts")
     add_executable(AsteroidsRogueTests tests/RogueTests.cpp tests/Check.h)
     target_link_libraries(AsteroidsRogueTests PRIVATE AsteroidsRogue)
     emerald_set_warnings(AsteroidsRogueTests)

@@ -1,14 +1,22 @@
-// Tests for the menus and options: settings.txt parsing and writing, menu navigation, and which
-// title screen page shows when. No window, GPU or audio needed.
+// Tests for the menus and options: settings.txt parsing and writing, menu navigation, which
+// title screen page shows when, and the text styles (line font, pixel font, glowing TTF). No
+// window, GPU or audio needed: fonts are loaded without a device.
 
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <string>
+
+#include <Emerald/Core/Log.h>
+#include <Emerald/Renderer/Font.h>
+#include <Emerald/Renderer/Renderer2D.h>
 
 #include "Check.h"
 #include "Menu.h"
 #include "Screens.h"
 #include "Settings.h"
+#include "Text.h"
 
 namespace {
 
@@ -98,6 +106,62 @@ void TestTitlePages()
     Check(PageAt(2.0f * p + 0.1f, false) == Page::PressStart, "two pages without high scores");
 }
 
+void TestTextStyles()
+{
+    namespace Text = Asteroids::Text;
+    Emerald::Log::Init({});
+    const std::filesystem::path fonts = ASTEROIDS_FONTS_DIR;
+
+    // Default: the line font (letters as wide as tall, 2/3 of that inked).
+    Check(Text::UsesLineFont(), "the line font is the default");
+    Check(std::abs(Text::Width("AB", 12.0f) - 20.0f) < 0.01f, "line font width");
+
+    // Pixel font: Press Start 2P baked at 8 px, drawn at whole multiples, rounded a little down.
+    std::optional<Emerald::Font> pixel =
+        Emerald::Font::Load(nullptr, fonts / "PressStart2P-Regular.ttf",
+                            {.Size = 8.0f,
+                             .Ranges = {Text::kCapitalsAndSymbols},
+                             .Oversample = 1,
+                             .Filter = Emerald::TextureFilter::Nearest});
+    Check(pixel.has_value(), "Press Start 2P loads");
+    if (pixel) {
+        Text::SetStyle({.Fonts = {&*pixel}, .PixelSizes = true});
+        Check(std::abs(Text::Width("AB", 16.0f) - 32.0f) < 0.01f, "16 units: 2x (16 px letters)");
+        Check(std::abs(Text::Width("AB", 20.0f) - 32.0f) < 0.01f, "20 units rounds down to 2x");
+        Check(std::abs(Text::Width("AB", 5.0f) - 16.0f) < 0.01f, "never smaller than 1x");
+        Check(Text::Width("ab", 16.0f) == Text::Width("AB", 16.0f), "drawn in capitals");
+
+        Emerald::Renderer2D r;
+        r.Begin(Emerald::Mat4::OrthoPixelSpace(1280.0f, 720.0f));
+        Text::Draw(r, "ab c", {10.0f, 10.0f}, 16.0f, {1.0f, 1.0f, 1.0f, 1.0f});
+        r.End();
+        Check(r.GetSpriteCount() == 3, "one sprite per letter (lower case uses the capitals)");
+    }
+
+    // Glowing TTF on the line font's grid: same widths as the line font, a halo, additive.
+    std::optional<Emerald::Font> smooth =
+        Emerald::Font::Load(nullptr, fonts / "ShareTechMono-Regular.ttf",
+                            {.Size = 32.0f, .Ranges = {Text::kCapitalsAndSymbols}});
+    Check(smooth.has_value(), "Share Tech Mono loads");
+    if (smooth) {
+        Text::SetStyle({.Fonts = {&*smooth}, .Monospace = true, .Additive = true, .Halo = 0.2f});
+        Check(std::abs(Text::Width("AB", 12.0f) - 20.0f) < 0.01f, "monospace keeps line widths");
+
+        Emerald::Renderer2D r;
+        r.Begin(Emerald::Mat4::OrthoPixelSpace(1280.0f, 720.0f));
+        Text::DrawCentered(r, "AB", 640.0f, 10.0f, 24.0f, {1.0f, 1.0f, 1.0f, 1.0f});
+        const bool restored = r.GetBlendMode() == Emerald::BlendMode::Alpha;
+        Text::Draw(r, "AB", {10.0f, 50.0f}, 24.0f, {1.0f, 1.0f, 1.0f, 1.0f}, false);
+        r.End();
+        Check(restored, "the blend mode is restored after additive text");
+        Check(r.GetSpriteCount() == 2 * 9 + 2, "8 halo copies + the letters; halo can be off");
+        Check(r.GetCommands().size() >= 1 &&
+                  r.GetCommands()[0].Blend == Emerald::BlendMode::Additive,
+              "drawn additively");
+    }
+    Text::SetStyle({});
+}
+
 } // namespace
 
 int main()
@@ -107,6 +171,7 @@ int main()
     TestSettingsFile();
     TestMenu();
     TestTitlePages();
+    TestTextStyles();
     std::printf("%d failure(s)\n", g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }

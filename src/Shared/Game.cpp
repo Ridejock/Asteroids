@@ -9,7 +9,7 @@
 
 #include "Playfield.h"
 #include "ScoreScreens.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids {
 
@@ -576,7 +576,7 @@ void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
     // Score in the top-left corner (at least two digits, like the arcade's "00").
     const std::string score =
         m_Score < 10 ? "0" + std::to_string(m_Score) : std::to_string(m_Score);
-    VectorFont::DrawText(r, score, {40.0f, 24.0f}, 30.0f, kTextColor);
+    Text::Draw(r, score, {40.0f, 24.0f}, 30.0f, kTextColor);
 
     // Remaining ships below it, pointing up.
     for (u32 i = 0; drawLives && i < m_Lives; ++i) {
@@ -588,24 +588,23 @@ void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
     const f32 centerX = kPlayfieldCenter.x;
     // The best score so far, small, at the top in the middle.
     if (m_HighScores.GetBest() > 0)
-        VectorFont::DrawTextCentered(r, std::to_string(m_HighScores.GetBest()), centerX, 30.0f,
-                                     18.0f, kTextColor);
+        Text::DrawCentered(r, std::to_string(m_HighScores.GetBest()), centerX, 30.0f, 18.0f,
+                           kTextColor);
 
     if (m_State == State::EnterInitials) {
         m_InitialsEntry.Draw(r, m_Prompts, m_Time);
     } else if (m_State == State::GameOver) {
         const bool hasTable = !m_HighScores.GetEntries().empty();
-        VectorFont::DrawTextCentered(r, "GAME OVER", centerX, hasTable ? 110.0f : 280.0f,
-                                     hasTable ? 48.0f : 54.0f, kTextColor);
+        Text::DrawCentered(r, "GAME OVER", centerX, hasTable ? 110.0f : 280.0f,
+                           hasTable ? 48.0f : 54.0f, kTextColor);
         if (hasTable)
             DrawHighScoreTable(r, 200.0f);
         // The start prompt ("PRESS ENTER") blinks slowly, once a new game can be started.
         if (m_StateTime >= kRestartDelay && std::fmod(m_Time, 1.2f) < 0.8f)
-            VectorFont::DrawTextCentered(r, m_Prompts.Start, centerX, hasTable ? 630.0f : 380.0f,
-                                         24.0f, kTextColor);
+            Text::DrawCentered(r, m_Prompts.Start, centerX, hasTable ? 630.0f : 380.0f, 24.0f,
+                               kTextColor);
     } else if (m_WaveBannerTimer > 0.0f) {
-        VectorFont::DrawTextCentered(r, "WAVE " + std::to_string(m_Wave), centerX, 200.0f, 30.0f,
-                                     kTextColor);
+        Text::DrawCentered(r, "WAVE " + std::to_string(m_Wave), centerX, 200.0f, 30.0f, kTextColor);
     }
 }
 

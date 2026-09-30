@@ -5,8 +5,9 @@
 #   -> build/release/<GAME_FILE_NAME>-<version>-windows-x64.zip   (vector game, component Game)
 #   -> build/release/<PIXEL_FILE_NAME>-<version>-windows-x64.zip  (pixel roguelike, component Rogue)
 #
-# Each contains only what a player needs: the .exe, its compiled shaders, README.txt,
-# LICENSE.txt and THIRD_PARTY_LICENSES.txt; the roguelike also its sprites (assets/pixel/).
+# Each contains only what a player needs: the .exe, its compiled shaders, its font
+# (assets/fonts/, with the font's license), README.txt, LICENSE.txt and THIRD_PARTY_LICENSES.txt;
+# the roguelike also its sprites (assets/pixel/).
 # Nothing else from assets/ is installed: player-supplied sound overrides (assets/sounds/, often
 # copyrighted) must never ship.
 # (`cmake --install build/release --component Game --prefix <dir>` gives the same files unzipped.)
@@ -64,11 +65,34 @@ string(REGEX REPLACE "(^|\n)[ \t]*(/\\*|\\*/)[ \t]*" "\\1" dr_mp3_license "${dr_
 file(WRITE "${package_dir}/dr_mp3-license.txt" "${dr_mp3_license}")
 _add_notice("dr_mp3 (https://github.com/mackron/dr_libs)" "${package_dir}/dr_mp3-license.txt")
 
+# Each game ships its own font, so each zip gets its own notices: the shared libraries above plus
+# that font's license (SIL Open Font License).
+file(READ "${notices}" shared_notices)
+function(_write_game_notices out font_title license)
+    file(READ "${license}" text)
+    file(WRITE "${out}" "${shared_notices}"
+         "==============================================================================\n"
+         "${font_title}\n"
+         "==============================================================================\n\n"
+         "${text}\n")
+endfunction()
+set(fonts_dir "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts")
+set(vector_notices "${package_dir}/vector/THIRD_PARTY_LICENSES.txt")
+set(rogue_notices "${package_dir}/rogue/THIRD_PARTY_LICENSES.txt")
+_write_game_notices("${vector_notices}"
+    "Share Tech Mono font by Carrois Type Design (assets/fonts/ShareTechMono-Regular.ttf)"
+    "${fonts_dir}/ShareTechMono-OFL.txt")
+_write_game_notices("${rogue_notices}"
+    "Press Start 2P font by CodeMan38 (assets/fonts/PressStart2P-Regular.ttf)"
+    "${fonts_dir}/PressStart2P-OFL.txt")
+
 # What goes into the package ("Game" component; the dependencies' own install rules, if any,
 # are in other components and left out).
 install(TARGETS Asteroids RUNTIME DESTINATION . COMPONENT Game)
 install(DIRECTORY "$<TARGET_FILE_DIR:Asteroids>/shaders/" DESTINATION shaders COMPONENT Game)
-install(FILES "${package_dir}/README.txt" "${package_dir}/LICENSE.txt" "${notices}"
+install(FILES "${fonts_dir}/ShareTechMono-Regular.ttf" "${fonts_dir}/ShareTechMono-OFL.txt"
+        DESTINATION assets/fonts COMPONENT Game)
+install(FILES "${package_dir}/README.txt" "${package_dir}/LICENSE.txt" "${vector_notices}"
         DESTINATION . COMPONENT Game)
 
 # The roguelike ("Rogue" component): the same, plus its sprites.
@@ -78,7 +102,9 @@ install(DIRECTORY "$<TARGET_FILE_DIR:AsteroidsPixel>/shaders/" DESTINATION shade
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/atlas.png"
               "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/atlas.json"
         DESTINATION assets/pixel COMPONENT Rogue)
-install(FILES "${package_dir}/rogue/README.txt" "${package_dir}/LICENSE.txt" "${notices}"
+install(FILES "${fonts_dir}/PressStart2P-Regular.ttf" "${fonts_dir}/PressStart2P-OFL.txt"
+        DESTINATION assets/fonts COMPONENT Rogue)
+install(FILES "${package_dir}/rogue/README.txt" "${package_dir}/LICENSE.txt" "${rogue_notices}"
         DESTINATION . COMPONENT Rogue)
 
 if(WIN32)

@@ -9,6 +9,14 @@
   pool) that keeps its progress in `meta.txt`, and a high score table that shows how far each run
   got. New sprites for all of it.
 - ROCK BLASTER (vector) plays exactly as before.
+- Text is now drawn with TrueType fonts through Emerald's new `Font` and
+  `Renderer2D::DrawString` (Emerald updated to `fe1847b`, which also fixes loading fonts that
+  lack some of the requested characters). ROCK BLASTER ROGUE uses Press Start 2P (crisp, nearest
+  filtering, whole-number scales) for its menus, HUD, upgrade picker, hangar, results, high
+  scores and boss names; ROCK BLASTER uses Share Tech Mono, glowing additively like the lines, on
+  the old letter grid so every layout stays the same. Both fonts are under the SIL Open Font
+  License; each zip has its font and license in `assets/fonts/` and in
+  `THIRD_PARTY_LICENSES.txt`.
 
 ## 1.1.0 (2026-09-30)
 

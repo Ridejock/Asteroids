@@ -12,12 +12,16 @@ It comes as two games on one shared code base (application loop, controls, menus
 particle effects, ship, rocks, saucers, high scores):
 
 - **ROCK BLASTER** (vector, target `Asteroids`, `RockBlaster.exe`): the classic arcade game.
-  Everything on screen (ship, rocks, bullets, explosions, the logo, even the score digits and
-  letters) is drawn with lines by Emerald's `Renderer2D`; there are no textures or font files.
+  Everything on screen (ship, rocks, bullets, explosions, the logo) is drawn with lines by
+  Emerald's `Renderer2D`. The text uses the monospace TTF font Share Tech Mono
+  (`assets/fonts/`, OFL) with linear filtering, drawn additively with a soft halo so it glows
+  like the lines; it keeps the old vector font's letter grid, so layouts are unchanged.
 - **ROCK BLASTER ROGUE** (pixel, target `AsteroidsPixel`, `RockBlasterRogue.exe`): a roguelike on
   the same controls: runs of 3 sectors with bosses, an upgrade after every wave, permadeath, and a
   hangar where the scrap from your runs buys new ships and upgrades. Sprites from `assets/pixel/`
-  (one texture atlas) over a twinkling starfield; the text keeps the vector font. See
+  (one texture atlas) over a twinkling starfield. All text (menus, HUD, upgrade cards, hangar,
+  results, high scores, boss names) uses the pixel font Press Start 2P (`assets/fonts/`, OFL),
+  baked at 8 px with nearest filtering and drawn at whole-number scales so it stays crisp. See
   [ROCK BLASTER ROGUE](#rock-blaster-rogue-the-pixel-version).
 
 ## The game's name
@@ -34,8 +38,8 @@ It feeds the window title, the title screen logo, the `.exe` name (`GAME_FILE_NA
 `PIXEL_FILE_NAME`, derived as PascalCase: "NEW NAME" → `NewName.exe`; set it to override), the Windows
 version resource (file description, product name), the per-user folder for settings and high
 scores, the README in the package, and the zip's name. The code reads it from the generated
-`GameInfo.h` (`src/Shared/GameInfo.h.in`, one `GameInfo::Edition` per game). Upper case looks best in the vector font (A–Z, 0–9 and
-a few symbols).
+`GameInfo.h` (`src/Shared/GameInfo.h.in`, one `GameInfo::Edition` per game). Text is shown in upper case; the fonts
+cover A–Z, 0–9 and the usual ASCII symbols.
 
 ![Vector version](docs/screenshot.png)
 ![Pixel version](docs/screenshot-pixel.png)
@@ -341,15 +345,16 @@ cmake --build --preset release --target package
 #    build\release\RockBlasterRogue-1.1.0-windows-x64.zip
 ```
 
-The roguelike's zip has `RockBlasterRogue.exe`, the shaders, `assets\pixel\atlas.png/json` and
-its own `README.txt` (`packaging/README-rogue.txt.in`); the rest is as below.
+The roguelike's zip has `RockBlasterRogue.exe`, the shaders, `assets\pixel\atlas.png/json`,
+`assets\fonts\` (Press Start 2P and its license) and its own `README.txt` (`packaging/README-rogue.txt.in`); the rest is as below.
 
 It contains `RockBlaster.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
 runs on a clean Windows 10/11 PC), the compiled `shaders\` folder, `README.txt` (controls, rules,
 credits, generated from `packaging/README.txt.in`), `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`
 (the licenses of Emerald, SDL3 with HIDAPI, spdlog + {fmt}, stb, nlohmann/json and dr_mp3, taken
-from the fetched sources at configure time). Nothing from `assets/` is packaged. The rules are in
-`cmake/Packaging.cmake`; `cmake --install build/release --component Game --prefix <dir>` gives
+from the fetched sources at configure time, plus the SIL Open Font License of the game's font)
+and `assets\fonts\` (the font and its license). Nothing else from `assets/` is packaged. The rules are in
+`cmake/Packaging.cmake`; `cmake --install build/release --component Game --prefix <dir>` (or `Rogue`) gives
 the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`; what
 changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -435,7 +440,8 @@ tools/PixelSprites  the scripts that made the roguelike's sprites
 | `src/Shared/ScoreScreens.h/.cpp` | Initials entry and the high score table, used by both games |
 | `src/Shared/ParticleEffects.h/.cpp` | The particle effects (one `ParticleEmitterConfig` each) spawned from the game's sound events, and the exhaust |
 | `src/Shared/Screens.h/.cpp` | The title screen: glowing logo, page cycling, the controls table |
-| `src/Shared/Menu.h/.cpp` | A vertical vector-font menu (selection, wrap-around, values on the right) used by the title, pause and options menus |
+| `src/Shared/Text.h/.cpp` | All game text: draws with the TTF font set by each game (`Text::Style`: pixel-scaled or smooth, monospace grid, additive glow) or the line font; heights are cap heights |
+| `src/Shared/Menu.h/.cpp` | A vertical menu (selection, wrap-around, values on the right) used by the title, pause and options menus |
 | `src/Shared/Settings.h/.cpp` | The options and `settings.txt` |
 | `src/Shared/Icon.h/.cpp` | Draws the ship icon into an image (window icon, `.ico`) |
 | `src/Shared/GameInfo.h.in` | Title, file name, version: filled in by CMake from `GAME_TITLE` and the project version |
@@ -446,7 +452,7 @@ tools/PixelSprites  the scripts that made the roguelike's sprites
 | `src/Shared/Ship.h/.cpp` | Ship movement (rotation, thrust with inertia and drag) and its outline + flame |
 | `src/Shared/Asteroid.h/.cpp` | Random jagged rocks, sizes, splitting, points |
 | `src/Shared/Bullet.h` | Bullet data and limits |
-| `src/Shared/VectorFont.h/.cpp` | A line-segment font (A–Z, 0–9, space and `- + = _ . , : ! ? / < > ' ( )`) on a 4 × 6 grid |
+| `src/Shared/VectorFont.h/.cpp` | The line-segment fallback font, also the letter grid for monospace text (A–Z, 0–9, space and `- + = _ . , : ! ? / < > ' ( )`) on a 4 × 6 grid |
 | `src/Shared/Playfield.h` | The fixed 1280 × 720 logical playfield: wrap-around, wrapped distances, drawing objects on both sides of an edge |
 | `src/Shared/Random.h` | Tiny `std::mt19937` helper |
 | `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |

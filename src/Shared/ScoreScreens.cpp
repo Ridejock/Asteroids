@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "Playfield.h"
-#include "VectorFont.h"
+#include "Text.h"
 
 namespace Asteroids {
 
@@ -57,36 +57,33 @@ bool InitialsEntry::Update(const GameInput& input)
 void InitialsEntry::Draw(Emerald::Renderer2D& r, const Prompts& prompts, f32 time) const
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "YOUR SCORE IS ONE OF THE TEN BEST", centerX, 140.0f, 24.0f,
-                                 kTextColor);
-    VectorFont::DrawTextCentered(r, "PLEASE ENTER YOUR INITIALS", centerX, 185.0f, 24.0f,
-                                 kTextColor);
+    Text::DrawCentered(r, "YOUR SCORE IS ONE OF THE TEN BEST", centerX, 140.0f, 24.0f, kTextColor);
+    Text::DrawCentered(r, "PLEASE ENTER YOUR INITIALS", centerX, 185.0f, 24.0f, kTextColor);
 
     // Three big letters over underlines; the one being changed blinks its underline.
     constexpr f32 kLetterHeight = 60.0f;
     constexpr f32 kSlotSpacing = 80.0f;
-    const f32 letterWidth = VectorFont::TextWidth("A", kLetterHeight);
+    const f32 letterWidth = Text::Width("A", kLetterHeight);
     for (usize i = 0; i < HighScoreTable::kInitialsLength; ++i) {
         const f32 x = centerX + (static_cast<f32>(i) - 1.0f) * kSlotSpacing - 0.5f * letterWidth;
         if (i <= m_Cursor)
-            VectorFont::DrawText(r, std::string(1, m_Initials[i]), {x, 290.0f}, kLetterHeight,
-                                 kTextColor);
+            Text::Draw(r, std::string(1, m_Initials[i]), {x, 290.0f}, kLetterHeight, kTextColor);
         const bool current = i == m_Cursor;
         if (!current || std::fmod(time * 3.0f, 2.0f) < 1.4f)
             r.DrawLine({x, 368.0f}, {x + letterWidth, 368.0f},
                        current ? kTextColor : kDimTextColor);
     }
 
-    VectorFont::DrawTextCentered(r, "UP / DOWN: CHANGE LETTER", centerX, 450.0f, 20.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, prompts.Confirm + ": NEXT", centerX, 490.0f, 20.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, prompts.Back + ": BACK", centerX, 530.0f, 20.0f, kTextColor);
+    Text::DrawCentered(r, "UP / DOWN: CHANGE LETTER", centerX, 450.0f, 20.0f, kTextColor);
+    Text::DrawCentered(r, prompts.Confirm + ": NEXT", centerX, 490.0f, 20.0f, kTextColor);
+    Text::DrawCentered(r, prompts.Back + ": BACK", centerX, 530.0f, 20.0f, kTextColor);
 }
 
 void DrawHighScoreTable(Emerald::Renderer2D& r, const HighScoreTable& table, f32 top,
                         usize highlight, f32 time)
 {
     const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "HIGH SCORES", centerX, top, 24.0f, kTextColor);
+    Text::DrawCentered(r, "HIGH SCORES", centerX, top, 24.0f, kTextColor);
 
     // " 1.  ABC   12340": every row has the same length, so the columns line up when centered.
     const std::vector<HighScore>& entries = table.GetEntries();
@@ -101,8 +98,8 @@ void DrawHighScoreTable(Emerald::Renderer2D& r, const HighScoreTable& table, f32
         // The entry just made blinks.
         if (i == highlight && std::fmod(time * 3.0f, 2.0f) >= 1.4f)
             continue;
-        VectorFont::DrawTextCentered(r, row, centerX, top + 50.0f + 32.0f * static_cast<f32>(i),
-                                     20.0f, kTextColor);
+        Text::DrawCentered(r, row, centerX, top + 50.0f + 32.0f * static_cast<f32>(i), 20.0f,
+                           kTextColor);
     }
 }
 
