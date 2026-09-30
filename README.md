@@ -1,11 +1,17 @@
 # Asteroids
 
 A small, readable remake of the classic vector arcade game **Asteroids**, built with the
-[Emerald](https://github.com/Ridejock/Emerald) C++20 engine (SDL3 + SDL GPU). Everything on screen —
-ship, rocks, bullets, explosions, even the score digits and letters — is drawn with 1 px lines by
-Emerald's `Renderer2D`; there are no textures or font files.
+[Emerald](https://github.com/Ridejock/Emerald) C++20 engine (SDL3 + SDL GPU). It comes in two
+versions that play exactly the same (same rules, sounds, controls and code, apart from drawing):
 
-![Screenshot](docs/screenshot.png)
+- **`Asteroids`**, the vector version: everything on screen (ship, rocks, bullets, explosions, even
+  the score digits and letters) is drawn with 1 px lines by Emerald's `Renderer2D`; there are no
+  textures or font files.
+- **`AsteroidsPixel`**, the pixel-art version: sprites from `assets/pixel/` (one texture atlas) over
+  a twinkling starfield, with small pixel bullets and sparks. The text keeps the vector font.
+
+![Vector version](docs/screenshot.png)
+![Pixel version](docs/screenshot-pixel.png)
 
 ## Controls
 
@@ -28,12 +34,12 @@ e.g. "PRESS OPTIONS / ENTER" or "CROSS / ENTER: NEXT"). Any connected pad works 
 rumbles briefly when your ship is destroyed. Stick deadzone: 20% (radial).
 
 The inputs are bound to named actions (`Rotate` axis, `Thrust`, `Fire`, `Hyperspace`, `Start`,
-`Mute`, `Quit`, and for menus `MenuUp`, `MenuDown`, `Confirm`, `Back`) in `AsteroidsApp::OnStart` in `src/Main.cpp`; change a binding there, or at runtime with
+`Mute`, `Quit`, and for menus `MenuUp`, `MenuDown`, `Confirm`, `Back`) in `AsteroidsApp::BindControls` in `src/Shared/AsteroidsApp.cpp` (both versions); change a binding there, or at runtime with
 `GetInput().RebindAction(...)`.
 
 ## Sound
 
-Every sound is generated when the game starts (Emerald's `Synth`, see `src/Sounds.cpp`); there are
+Every sound is generated when the game starts (Emerald's `Synth`, see `src/Shared/Sounds.cpp`); there are
 no audio files.
 
 | Sound | When | How it is made |
@@ -71,8 +77,8 @@ Missing files keep the generated sound, and the log lists what was loaded (`Soun
 ambience to 0.8), so full-scale clips do not drown out the rest. A `thrust` file is looped, so it
 (and the saucer sirens) should loop seamlessly. `assets/sounds/*` is in `.gitignore` except its `README.md`, which lists the
 names too. The game logic only
-reports sound events (`Game::GetSounds`); `AsteroidsApp::PlayGameSounds` in `src/Main.cpp` plays
-them.
+reports sound events (`Game::GetSounds`); `AsteroidsApp::PlayGameSounds` in `src/Shared/AsteroidsApp.cpp` plays
+them. Both versions use the same sounds and overrides.
 
 ## Rules
 
@@ -101,13 +107,14 @@ third letter the table is shown with your entry blinking, then the start prompt.
 shown small at the top of the screen while you play.
 
 The table is saved as a plain text file in your per-user folder (`Paths::GetPrefPath("Ridejock",
-"Asteroids")` from Emerald, via SDL):
+"Asteroids")` from Emerald, via SDL). Each version keeps its own table: `highscores.txt` for
+`Asteroids`, `highscores_pixel.txt` for `AsteroidsPixel`, side by side in that folder:
 
-| OS | File |
+| OS | Folder |
 |---|---|
-| Windows | `%APPDATA%\Ridejock\Asteroids\highscores.txt` (e.g. `C:\Users\you\AppData\Roaming\...`) |
-| Linux | `~/.local/share/Ridejock/Asteroids/highscores.txt` |
-| macOS | `~/Library/Application Support/Ridejock/Asteroids/highscores.txt` |
+| Windows | `%APPDATA%\Ridejock\Asteroids\` (e.g. `C:\Users\you\AppData\Roaming\...`) |
+| Linux | `~/.local/share/Ridejock/Asteroids/` |
+| macOS | `~/Library/Application Support/Ridejock/Asteroids/` |
 
 The log shows the exact path at startup (`High scores file: ...`). Each line is initials, a space,
 and the score, e.g. `ABC 12340` (initials are always 3 characters and may contain spaces). A missing
@@ -133,9 +140,10 @@ built automatically.
 2. Open the `Asteroids` folder in VS Code. CMake Tools reads `CMakePresets.json` (same presets as
    Emerald's, so it works exactly like building the engine); pick the configure preset **Debug** (or
    Release / Debug (ImGui debug overlay)) in the status bar.
-3. **Build** (F7), then **Run/Debug** the `Asteroids` target (Shift+F5 / Ctrl+F5).
-   The executable is `build\<preset>\bin\Asteroids.exe`, with its compiled shaders in
-   `build\<preset>\bin\shaders\`.
+3. **Build** (F7), then **Run/Debug** the `Asteroids` or `AsteroidsPixel` target (pick it as the
+   launch target in the status bar; Shift+F5 / Ctrl+F5). The executables are
+   `build\<preset>\bin\Asteroids.exe` and `AsteroidsPixel.exe`, sharing the compiled shaders in
+   `build\<preset>\bin\shaders\` and the copied `assets\`.
 
 From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
 
@@ -143,6 +151,7 @@ From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
 cmake --preset debug
 cmake --build --preset debug
 .\build\debug\bin\Asteroids.exe
+.\build\debug\bin\AsteroidsPixel.exe
 ```
 
 ### Linux / macOS
@@ -151,6 +160,7 @@ cmake --build --preset debug
 cmake --preset debug
 cmake --build --preset debug
 ./build/debug/bin/Asteroids
+./build/debug/bin/AsteroidsPixel
 ```
 
 (On Linux, SDL3 needs the usual X11/Wayland development packages; see Emerald's README.)
@@ -168,9 +178,11 @@ ctest --test-dir build/debug --output-on-failure
 |---|---|
 | `debug` | Debug build |
 | `release` | Optimized build |
-| `debug-full` | Debug build with Emerald's Dear ImGui overlay (`EMERALD_USE_IMGUI=ON`): FPS, wave, score, line count |
+| `debug-full` | Debug build with Emerald's Dear ImGui overlay (`EMERALD_USE_IMGUI=ON`): FPS, wave, score, line/sprite/draw call counts |
 
 ### Command line
+
+Both executables take the same options:
 
 ```sh
 Asteroids --frames 600                        # quit after 600 frames
@@ -182,7 +194,9 @@ Asteroids --game-over 12345                   # testing: end at once with this s
 
 The debug-full build's ImGui panel also has *Large saucer*, *Small saucer* and *Game over* buttons.
 
-The log is written to `logs/Asteroids.log` next to the executable.
+The log is written to `logs/Asteroids.log` (`logs/AsteroidsPixel.log` for the pixel version) next
+to the executable. If the pixel version cannot find its sprites (`assets/pixel/` next to the
+executable) it logs an error and draws the objects' outlines instead.
 
 ## Engine development
 
@@ -216,26 +230,50 @@ commit, clear the variable: `-DASTEROIDS_EMERALD_SOURCE_DIR=`.)
 
 ## Code tour
 
+The code is one library with everything both versions share, plus one small executable per look:
+
+```
+src/Shared/   AsteroidsShared (static library): the game, its rules, sounds, controls, high scores,
+              the application loop and the HUD; draws nothing but the HUD itself
+src/Vector/   Asteroids: draws the world with lines
+src/Pixel/    AsteroidsPixel: draws the world with sprites
+assets/pixel/ the pixel sprites (atlas.png + atlas.json, and the single images for editing)
+```
+
 | File | What it does |
 |---|---|
-| `src/Main.cpp` | The `Emerald::Application`: binds the controls as input actions in `OnStart`, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window and draws it in `OnRender2D`; plays the game's sound events and the thrust and saucer loops; loads and saves the high scores |
-| `src/Game.h/.cpp` | Game state and rules: waves, bullets, saucers, collisions, lives, score, explosions, HUD, initials entry and the high score screen, sound events and the heartbeat timing |
-| `src/Saucer.h/.cpp` | The flying saucer: sizes, speeds, points, outline, and the aiming math |
-| `src/HighScores.h/.cpp` | The top-10 table: ordering, the text file format, loading and saving |
-| `src/Sounds.h/.cpp` | All sound effects, generated at startup with Emerald's `Synth`; optional file overrides (`LoadOverrides`) |
+| `src/Shared/AsteroidsApp.h/.cpp` | The shared `Emerald::Application`: command line options, binds the controls as input actions, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window in `OnRender2D` and calls the version's `DrawWorld` + `DrawHud`; plays the game's sound events and the thrust and saucer loops; loads and saves the high scores |
+| `src/Vector/Main.cpp` | `VectorAsteroids`: `DrawWorld` with outlines (rocks, ship + flame, saucer, bullets, debris), `highscores.txt` |
+| `src/Pixel/Main.cpp` | `PixelAsteroids`: loads the atlas in `OnLoadAssets`; `DrawWorld` with sprites scaled to the collision radii (see `Look::` constants), a procedural starfield, pixel bullets and sparks; ship sprites as life icons; `highscores_pixel.txt` |
+| `src/Shared/Game.h/.cpp` | Game state and rules: waves, bullets, saucers, collisions, lives, score, explosions, HUD, initials entry and the high score screen, sound events and the heartbeat timing. Exposes read-only state (`GetShip`, `GetAsteroids`, `GetParticles`, ...) for the renderers |
+| `src/Shared/Saucer.h/.cpp` | The flying saucer: sizes, speeds, points, outline, and the aiming math |
+| `src/Shared/HighScores.h/.cpp` | The top-10 table: ordering, the text file format, loading and saving |
+| `src/Shared/Sounds.h/.cpp` | All sound effects, generated at startup with Emerald's `Synth`; optional file overrides (`LoadOverrides`) |
+| `src/Shared/Ship.h/.cpp` | Ship movement (rotation, thrust with inertia and drag) and its outline + flame |
+| `src/Shared/Asteroid.h/.cpp` | Random jagged rocks, sizes, splitting, points |
+| `src/Shared/Bullet.h` | Bullet data and limits |
+| `src/Shared/VectorFont.h/.cpp` | A line-segment font (A–Z, 0–9, space and `- + = _ . , : ! ? / < > ' ( )`) on a 4 × 6 grid |
+| `src/Shared/Playfield.h` | The fixed 1280 × 720 logical playfield: wrap-around, wrapped distances, drawing objects on both sides of an edge |
+| `src/Shared/Random.h` | Tiny `std::mt19937` helper |
 | `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |
 | `tests/GameLogicTests.cpp` | ctest for the high score table and the saucer's aim |
-| `src/Ship.h/.cpp` | Ship movement (rotation, thrust with inertia and drag) and its outline + flame |
-| `src/Asteroid.h/.cpp` | Random jagged rocks, sizes, splitting, points |
-| `src/Bullet.h` | Bullet data and limits |
-| `src/VectorFont.h/.cpp` | A line-segment font (A–Z, 0–9, space and `- + = _ . , : ! ? / < > ' ( )`) on a 4 × 6 grid |
-| `src/Playfield.h` | The fixed 1280 × 720 logical playfield: wrap-around, wrapped distances, drawing objects on both sides of an edge |
-| `src/Random.h` | Tiny `std::mt19937` helper |
 
-The game logic (`Game`) never touches the window or GPU: it gets a `GameInput` per fixed step and
-draws into a `Renderer2D` that `Main.cpp` has already set up with the right projection. The playfield
-is always 1280 × 720 logical pixels, scaled uniformly to the window with black bars (and clipped) when
-the aspect ratio differs, so resizing the window never changes the gameplay.
+The game logic (`Game`) never touches the window or GPU: it gets a `GameInput` per fixed step, and
+the executables draw its state into a `Renderer2D` that `AsteroidsApp` has already set up with the
+right projection. The playfield is always 1280 × 720 logical pixels, scaled uniformly to the window
+with black bars (and clipped) when the aspect ratio differs, so resizing the window never changes the
+gameplay. Collisions use the same radii in both versions; the pixel version only scales its sprites
+to match them, and picks between the two looks of each rock size by its spin direction, so it uses
+no extra random numbers (the same `--seed` gives the same rocks in both).
+
+### The pixel sprites
+
+`assets/pixel/` holds the sprites (generated for this project, AI-assisted): `ship` (38 × 80,
+pointing up, with the engine flames in its bottom rows, which are cropped off while not
+thrusting), `enemy` (the saucer, 80 × 46) and two looks for each rock size
+(`asteroid_large_1/2`, `asteroid_medium_1/2`, `asteroid_small_1/2`). The game loads only
+`atlas.png` + `atlas.json` (name → x, y, w, h); see `assets/pixel/README.md`. The build copies the
+whole `assets/` folder next to the executables.
 
 ## License
 
