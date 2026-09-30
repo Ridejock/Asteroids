@@ -32,8 +32,8 @@ struct Settings {
     [[nodiscard]] std::string Serialize() const;
     [[nodiscard]] static Settings Parse(std::string_view text);
 
-    // <per-user folder>/settings.txt, or empty if there is no such folder.
-    [[nodiscard]] static std::filesystem::path DefaultPath();
+    // <per-user folder of the game `fileName`>/settings.txt, or empty if there is no such folder.
+    [[nodiscard]] static std::filesystem::path DefaultPath(std::string_view fileName);
     // A missing or unreadable file gives the defaults. Does not log (it runs before the log
     // exists, to create the window in the right mode).
     [[nodiscard]] static Settings Load(const std::filesystem::path& file);

@@ -175,6 +175,114 @@ Sounds MakeSounds()
     LowPass(saucerFire, 5000.0f);
     ApplyDecay(saucerFire, 0.045f);
     sounds.SaucerFire = ToSound(saucerFire);
+
+    // --- Roguelike sounds ---
+    // Shield: a bright triangle zap falling fast, with a little noise.
+    std::vector<f32> zap = Generate({.Shape = Wave::Triangle,
+                                     .Seconds = 0.25f,
+                                     .StartHz = 1800.0f,
+                                     .EndHz = 300.0f,
+                                     .Volume = 0.4f});
+    MixInto(zap,
+            Generate({.Shape = Wave::Noise, .Seconds = 0.25f, .StartHz = 6000.0f, .Volume = 0.12f},
+                     41));
+    ApplyDecay(zap, 0.07f);
+    sounds.ShieldHit = ToSound(zap);
+
+    // Upgrade: four rising notes (a major arpeggio).
+    std::vector<f32> arp = Silence(0.44f);
+    const f32 notes[] = {523.25f, 659.25f, 783.99f, 1046.5f};
+    for (usize i = 0; i < 4; ++i) {
+        std::vector<f32> note = Generate({.Shape = Wave::Square,
+                                          .Seconds = 0.14f,
+                                          .StartHz = notes[i],
+                                          .Duty = 0.3f,
+                                          .Volume = 0.16f});
+        ApplyAdsr(note, {.Attack = 0.003f, .Decay = 0.06f, .Sustain = 0.5f, .Release = 0.05f});
+        MixInto(std::span<f32>(arp).subspan(i * arp.size() / 5), note);
+    }
+    sounds.Upgrade = ToSound(arp);
+
+    // Purchase: two quick blips, the second higher.
+    std::vector<f32> coin = Silence(0.2f);
+    for (usize i = 0; i < 2; ++i) {
+        std::vector<f32> blip = Generate({.Shape = Wave::Square,
+                                          .Seconds = 0.09f,
+                                          .StartHz = i == 0 ? 988.0f : 1319.0f,
+                                          .Volume = 0.16f});
+        ApplyAdsr(blip, {.Attack = 0.002f, .Decay = 0.03f, .Sustain = 0.7f, .Release = 0.03f});
+        MixInto(std::span<f32>(coin).subspan(i * coin.size() / 2), blip);
+    }
+    sounds.Purchase = ToSound(coin);
+
+    // Metal: two detuned high squares, decaying fast, like a clank.
+    std::vector<f32> clank = Generate({.Shape = Wave::Square,
+                                       .Seconds = 0.18f,
+                                       .StartHz = 1250.0f,
+                                       .EndHz = 1100.0f,
+                                       .Volume = 0.14f});
+    MixInto(
+        clank,
+        Generate({.Shape = Wave::Square, .Seconds = 0.18f, .StartHz = 1710.0f, .Volume = 0.1f}));
+    LowPass(clank, 7000.0f);
+    ApplyDecay(clank, 0.035f);
+    sounds.MetalHit = ToSound(clank);
+
+    // Blast: a short, deep boom with a sine thump underneath.
+    std::vector<f32> boom = Generate({.Shape = Wave::Noise,
+                                      .Seconds = 0.8f,
+                                      .StartHz = 1600.0f,
+                                      .EndHz = 120.0f,
+                                      .Volume = 0.7f},
+                                     51);
+    LowPass(boom, 700.0f);
+    MixInto(boom, Generate({.Shape = Wave::Sine,
+                            .Seconds = 0.8f,
+                            .StartHz = 120.0f,
+                            .EndHz = 40.0f,
+                            .Volume = 0.5f}));
+    ApplyDecay(boom, 0.14f);
+    sounds.Blast = ToSound(boom);
+
+    // Missile: a soft rising hiss.
+    std::vector<f32> hiss = Generate({.Shape = Wave::Noise,
+                                      .Seconds = 0.3f,
+                                      .StartHz = 2000.0f,
+                                      .EndHz = 5000.0f,
+                                      .Volume = 0.2f},
+                                     61);
+    LowPass(hiss, 4000.0f);
+    ApplyAdsr(hiss, {.Attack = 0.02f, .Decay = 0.1f, .Sustain = 0.5f, .Release = 0.1f});
+    sounds.MissileLaunch = ToSound(hiss);
+
+    // Boss alarm: a klaxon alternating two tones, three times.
+    std::vector<f32> alarm = Silence(1.2f);
+    for (usize i = 0; i < 6; ++i) {
+        std::vector<f32> tone = Generate({.Shape = Wave::Saw,
+                                          .Seconds = 0.19f,
+                                          .StartHz = i % 2 == 0 ? 440.0f : 330.0f,
+                                          .Volume = 0.16f});
+        LowPass(tone, 2500.0f);
+        ApplyAdsr(tone, {.Attack = 0.01f, .Decay = 0.05f, .Sustain = 0.8f, .Release = 0.03f});
+        MixInto(std::span<f32>(alarm).subspan(i * alarm.size() / 6), tone);
+    }
+    sounds.BossAlarm = ToSound(alarm);
+
+    // Boss explosion: a long crash over a very deep falling rumble.
+    std::vector<f32> bossCrash = Generate({.Shape = Wave::Noise,
+                                           .Seconds = 2.6f,
+                                           .StartHz = 1800.0f,
+                                           .EndHz = 90.0f,
+                                           .Volume = 0.75f},
+                                          71);
+    LowPass(bossCrash, 700.0f);
+    MixInto(bossCrash, Generate({.Shape = Wave::Sine,
+                                 .Seconds = 2.6f,
+                                 .StartHz = 70.0f,
+                                 .EndHz = 25.0f,
+                                 .Volume = 0.5f}));
+    ApplyDecay(bossCrash, 0.6f);
+    sounds.BossExplosion = ToSound(bossCrash);
     return sounds;
 }
 

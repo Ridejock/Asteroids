@@ -1,13 +1,15 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <Emerald/Emerald.h>
 
-#include "Game.h"
+#include "GameInfo.h"
+#include "GameMode.h"
 #include "Menu.h"
 #include "ParticleEffects.h"
 #include "Random.h"
@@ -35,12 +37,13 @@ struct Options {
 
 [[nodiscard]] Options ParseOptions(i32 argc, char** argv);
 
-// The window, log file etc. every version uses; `title` and `logName` (file name without
-// folder) differ per version. The window starts fullscreen / with vsync as saved in `settings`.
-// The caller still sets ShaderFormats (EMERALD_SHADER_FORMATS is defined for the executable).
+// The window, log file etc. every version uses, for `edition` (title, per-user folder, log
+// file name). The window starts fullscreen / with vsync as saved in `settings`. The caller still
+// sets ShaderFormats (EMERALD_SHADER_FORMATS is defined for the executable).
 [[nodiscard]] Emerald::ApplicationSpec MakeSpec(const Options& options, const Settings& settings,
-                                                const std::string& title,
-                                                const std::string& logName);
+                                                const GameInfo::Edition& edition);
+// The seed for the game: --seed, or a random one.
+[[nodiscard]] u32 MakeSeed(const Options& options);
 
 // Up/Down auto-repeat while held (for cycling through letters and menus): one step on every
 // press (even a very short tap), more after a short delay while the button stays down.
@@ -57,13 +60,15 @@ private:
 
 // Everything both versions share: controls (input actions), the fixed-step game update, the
 // title screen, pause and options menus, settings, sounds (events, loops, overrides), high score
-// loading/saving, fitting the playfield into the window, and the debug panel. A version only says
-// how the world looks (DrawWorld) and may load its own assets (OnLoadAssets).
+// loading/saving, fitting the playfield into the window, and the debug panel. A version brings
+// its rules (a GameMode: the classic Game or the roguelike), says how the world looks
+// (DrawWorld) and may load its own assets (OnLoadAssets).
 class AsteroidsApp : public Emerald::Application {
 public:
-    // `highScoresFile`: file name in the per-user folder, so each version keeps its own table.
-    AsteroidsApp(const Emerald::ApplicationSpec& spec, Options options, Settings settings,
-                 std::string highScoresFile);
+    // `highScoresFile`: file name in the edition's per-user folder.
+    AsteroidsApp(const Emerald::ApplicationSpec& spec, const GameInfo::Edition& edition,
+                 Options options, Settings settings, std::string highScoresFile,
+                 std::unique_ptr<GameMode> mode);
 
 protected:
     // Called at the end of OnStart (textures etc.).
@@ -72,12 +77,19 @@ protected:
     // Begin/End batch). The HUD is drawn afterwards, on top.
     virtual void DrawWorld(Emerald::Renderer2D& r) = 0;
     // The HUD; the default is the shared vector font HUD.
-    virtual void DrawHud(Emerald::Renderer2D& r) { m_Game.DrawHud(r); }
+    virtual void DrawHud(Emerald::Renderer2D& r) { m_Game->DrawHud(r); }
     // How the particle effects look (drawn right after DrawWorld); the default is glowing
     // streaks, which suits the vector look.
     [[nodiscard]] virtual Emerald::ParticleDrawOptions GetParticleDrawOptions() const { return {}; }
 
-    [[nodiscard]] const Game& GetGame() const { return m_Game; }
+    // The rules this version runs (the executable knows the concrete type).
+    [[nodiscard]] const GameMode& GetMode() const { return *m_Game; }
+    [[nodiscard]] GameMode& GetMode() { return *m_Game; }
+    [[nodiscard]] const GameInfo::Edition& GetEdition() const { return m_Edition; }
+    // <per-user folder>/<name>, or empty if there is no per-user folder.
+    [[nodiscard]] std::filesystem::path GetUserFile(std::string_view name) const;
+    // Called after every fixed step in which the game was updated (e.g. to save progress).
+    virtual void OnGameStepped() {}
 
     void OnStart() override;
     void OnEvent(const SDL_Event& event) override;
@@ -116,16 +128,19 @@ private:
     }
     void AddShake(f32 amount);
 
+    [[nodiscard]] static Menu MakeTitleMenu(const GameMode& mode);
+
+    const GameInfo::Edition& m_Edition;
     Options m_Options;
     Settings m_Settings;
     std::filesystem::path m_SettingsFile; // empty = can't save
     std::string m_HighScoresName;
-    Game m_Game;
+    std::unique_ptr<GameMode> m_Game;
     u32 m_ShipsLost = 0;
     ParticleEffects m_Effects;
 
     std::vector<Overlay> m_Overlays;
-    Menu m_TitleMenu{{"START GAME", "OPTIONS", "QUIT GAME"}};
+    Menu m_TitleMenu; // START GAME, the mode's extras, OPTIONS, QUIT GAME
     Menu m_PauseMenu{{"RESUME", "OPTIONS", "QUIT TO TITLE", "QUIT GAME"}};
     Menu m_OptionsMenu{{"MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN", "VSYNC", "SCREEN SHAKE",
                         "PARTICLES", "CONTROLS", "BACK"}};

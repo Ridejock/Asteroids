@@ -86,10 +86,10 @@ Settings Settings::Parse(std::string_view text)
     return settings;
 }
 
-std::filesystem::path Settings::DefaultPath()
+std::filesystem::path Settings::DefaultPath(std::string_view fileName)
 {
     const std::filesystem::path folder =
-        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, GameInfo::kFileName);
+        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, fileName);
     return folder.empty() ? folder : (folder / "settings.txt").make_preferred();
 }
 

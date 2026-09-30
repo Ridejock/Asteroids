@@ -8,7 +8,10 @@
 
 namespace Asteroids {
 
-class Game;
+class GameMode;
+namespace GameInfo {
+struct Edition;
+}
 
 // Button names on the connected gamepad for the controls page (empty = no pad connected).
 struct PadLabels {
@@ -19,8 +22,8 @@ struct PadLabels {
     std::string Mute;       // e.g. "VIEW"
 };
 
-// Everything on the title screen that is not the drifting rocks (those are the Game in its
-// Attract state). Pages change every few seconds while nobody presses anything.
+// Everything on the title screen that is not the drifting rocks (those are the game mode's
+// title state). Pages change every few seconds while nobody presses anything.
 namespace TitleScreen {
 
 enum class Page : u8 { PressStart, HighScores, Controls };
@@ -37,12 +40,12 @@ void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 m
 
 // The store page cover: the logo (narrow enough for a 630 x 500 crop of the playfield's middle)
 // and a tagline, nothing else.
-void DrawCover(Emerald::Renderer2D& r, f32 time);
+void DrawCover(Emerald::Renderer2D& r, const GameInfo::Edition& edition, f32 time);
 
 // The whole overlay: logo, the current page, credits and version. `startPrompt` is e.g.
 // "PRESS ENTER" or "PRESS START / ENTER".
-void Draw(Emerald::Renderer2D& r, const Game& game, Page page, std::string_view startPrompt,
-          const PadLabels& pad, f32 time);
+void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMode& game, Page page,
+          std::string_view startPrompt, const PadLabels& pad, f32 time);
 
 } // namespace TitleScreen
 

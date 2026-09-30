@@ -80,7 +80,7 @@ void ParticleEffects::SetEnabled(bool enabled)
     }
 }
 
-void ParticleEffects::Update(const Game& game, f32 dt)
+void ParticleEffects::Update(const GameMode& game, f32 dt)
 {
     if (!m_Enabled)
         return;

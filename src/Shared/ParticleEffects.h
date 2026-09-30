@@ -3,7 +3,7 @@
 #include <Emerald/Particles/ParticleSystem.h>
 #include <Emerald/Renderer/Renderer2D.h>
 
-#include "Game.h"
+#include "GameMode.h"
 
 namespace Asteroids {
 
@@ -18,7 +18,7 @@ public:
 
     // After every Game::Update (before the game's sounds are cleared): spawns the effects for
     // this step's events and the exhaust, then moves all particles.
-    void Update(const Game& game, f32 dt);
+    void Update(const GameMode& game, f32 dt);
     void Draw(Emerald::Renderer2D& r, const Emerald::ParticleDrawOptions& options) const
     {
         m_Particles.Draw(r, options);

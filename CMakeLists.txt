@@ -11,26 +11,37 @@ project(Asteroids
     LANGUAGES C CXX)
 
 # ---------------------------------------------------------------------------
-# The game's public name: set it here (or with -DGAME_TITLE="...") and nothing else. It is used
-# for the window title, the title screen logo, the .exe name and version resource, the per-user
-# folder and the release zip. GAME_FILE_NAME is derived from it ("ROCK BLASTER" -> "RockBlaster")
-# unless set explicitly.
+# The games' public names: set them here (or with -DGAME_TITLE="...") and nothing else. They are
+# used for the window title, the title screen logo, the .exe name and version resource, the
+# per-user folder and the release zip. The file names are derived from them ("ROCK BLASTER" ->
+# "RockBlaster") unless set explicitly.
+#   GAME_TITLE:  the vector game (the classic arcade game)
+#   PIXEL_TITLE: the pixel version (a roguelike), published separately
 # ---------------------------------------------------------------------------
-set(GAME_TITLE "ROCK BLASTER" CACHE STRING "The game's public name (upper case looks best)")
-set(GAME_FILE_NAME "" CACHE STRING "File/folder name of the game (empty = from GAME_TITLE)")
-set(game_file_name "${GAME_FILE_NAME}")
-if(NOT game_file_name)
-    string(REGEX MATCHALL "[A-Za-z0-9]+" title_words "${GAME_TITLE}")
-    foreach(word IN LISTS title_words)
-        string(SUBSTRING "${word}" 0 1 first)
-        string(SUBSTRING "${word}" 1 -1 rest)
-        string(TOUPPER "${first}" first)
-        string(TOLOWER "${rest}" rest)
-        string(APPEND game_file_name "${first}${rest}")
-    endforeach()
-endif()
-set(GAME_FILE_NAME "${game_file_name}")
-message(STATUS "Game: '${GAME_TITLE}' ${PROJECT_VERSION} (files: ${GAME_FILE_NAME})")
+set(GAME_TITLE "ROCK BLASTER" CACHE STRING "The vector game's public name (upper case looks best)")
+set(GAME_FILE_NAME "" CACHE STRING "File/folder name of the vector game (empty = from GAME_TITLE)")
+set(PIXEL_TITLE "ROCK BLASTER ROGUE" CACHE STRING "The pixel roguelike's public name")
+set(PIXEL_FILE_NAME "" CACHE STRING "File/folder name of the pixel game (empty = from PIXEL_TITLE)")
+
+# "ROCK BLASTER" -> "RockBlaster" into `out`, unless `explicit` is set.
+function(asteroids_file_name out title explicit)
+    set(name "${explicit}")
+    if(NOT name)
+        string(REGEX MATCHALL "[A-Za-z0-9]+" title_words "${title}")
+        foreach(word IN LISTS title_words)
+            string(SUBSTRING "${word}" 0 1 first)
+            string(SUBSTRING "${word}" 1 -1 rest)
+            string(TOUPPER "${first}" first)
+            string(TOLOWER "${rest}" rest)
+            string(APPEND name "${first}${rest}")
+        endforeach()
+    endif()
+    set(${out} "${name}" PARENT_SCOPE)
+endfunction()
+asteroids_file_name(GAME_FILE_NAME "${GAME_TITLE}" "${GAME_FILE_NAME}")
+asteroids_file_name(PIXEL_FILE_NAME "${PIXEL_TITLE}" "${PIXEL_FILE_NAME}")
+message(STATUS "Games: '${GAME_TITLE}' (${GAME_FILE_NAME}), '${PIXEL_TITLE}' (${PIXEL_FILE_NAME}),"
+               " version ${PROJECT_VERSION}")
 configure_file(src/Shared/GameInfo.h.in "${CMAKE_BINARY_DIR}/generated/GameInfo.h" @ONLY)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -138,24 +149,34 @@ foreach(game Asteroids AsteroidsPixel)
     add_dependencies(${game} AsteroidsAssets)
 endforeach()
 
-# The .exe files are named after the game: e.g. RockBlaster.exe and RockBlasterPixel.exe (the
+# The .exe files are named after the games: e.g. RockBlaster.exe and RockBlasterRogue.exe (the
 # targets keep their names).
 set_target_properties(Asteroids PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}")
-set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}Pixel")
+set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${PIXEL_FILE_NAME}")
 
 if(WIN32)
     # Release builds are GUI programs: no console window next to the game (the log still goes
     # to its file). main() stays the entry point.
-    target_link_options(Asteroids PRIVATE
-        "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/SUBSYSTEM:WINDOWS>"
-        "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/ENTRY:mainCRTStartup>")
-    # Icon and version details of the .exe (Explorer, taskbar, file properties).
     enable_language(RC)
     set(GAME_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon/icon.ico")
-    configure_file(packaging/windows/Game.rc.in "${CMAKE_BINARY_DIR}/generated/Game.rc" @ONLY)
-    target_sources(Asteroids PRIVATE "${CMAKE_BINARY_DIR}/generated/Game.rc")
-    set_source_files_properties("${CMAKE_BINARY_DIR}/generated/Game.rc" PROPERTIES
-        OBJECT_DEPENDS "${GAME_ICON_FILE}")
+    # Icon and version details of each .exe (Explorer, taskbar, file properties); Game.rc.in
+    # uses RC_TITLE and RC_FILE_NAME.
+    foreach(game Asteroids AsteroidsPixel)
+        target_link_options(${game} PRIVATE
+            "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/SUBSYSTEM:WINDOWS>"
+            "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/ENTRY:mainCRTStartup>")
+        if(game STREQUAL "Asteroids")
+            set(RC_TITLE "${GAME_TITLE}")
+            set(RC_FILE_NAME "${GAME_FILE_NAME}")
+        else()
+            set(RC_TITLE "${PIXEL_TITLE}")
+            set(RC_FILE_NAME "${PIXEL_FILE_NAME}")
+        endif()
+        set(rc "${CMAKE_BINARY_DIR}/generated/${game}.rc")
+        configure_file(packaging/windows/Game.rc.in "${rc}" @ONLY)
+        target_sources(${game} PRIVATE "${rc}")
+        set_source_files_properties("${rc}" PROPERTIES OBJECT_DEPENDS "${GAME_ICON_FILE}")
+    endforeach()
 endif()
 
 # Regenerates assets/icon/icon.ico and icon.png from src/Shared/Icon.cpp (they are committed, so

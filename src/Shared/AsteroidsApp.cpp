@@ -85,10 +85,10 @@ Options ParseOptions(i32 argc, char** argv)
 }
 
 Emerald::ApplicationSpec MakeSpec(const Options& options, const Settings& settings,
-                                  const std::string& title, const std::string& logName)
+                                  const GameInfo::Edition& edition)
 {
     Emerald::ApplicationSpec spec;
-    spec.Window.Title = title;
+    spec.Window.Title = edition.Title;
     spec.Window.Width = 1280;
     spec.Window.Height = 720;
     // Headless/automated runs (--frames) always use a window, whatever was saved.
@@ -100,9 +100,15 @@ Emerald::ApplicationSpec MakeSpec(const Options& options, const Settings& settin
     // The log goes to the per-user folder (the game's folder may not be writable, e.g. when it
     // was unzipped somewhere under Program Files), else next to the executable.
     const std::filesystem::path pref =
-        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, GameInfo::kFileName);
+        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, edition.FileName);
+    const std::string logName = std::string(edition.FileName) + ".log";
     spec.LogFile = pref.empty() ? std::filesystem::path("logs") / logName : pref / "logs" / logName;
     return spec;
+}
+
+u32 MakeSeed(const Options& options)
+{
+    return options.Seed != 0 ? options.Seed : std::random_device{}();
 }
 
 bool RepeatingPress::Update(bool pressed, bool down, f32 dt)
@@ -121,12 +127,31 @@ bool RepeatingPress::Update(bool pressed, bool down, f32 dt)
     return true;
 }
 
-AsteroidsApp::AsteroidsApp(const Emerald::ApplicationSpec& spec, Options options, Settings settings,
-                           std::string highScoresFile)
-    : Application(spec), m_Options(std::move(options)), m_Settings(settings),
-      m_SettingsFile(Settings::DefaultPath()), m_HighScoresName(std::move(highScoresFile)),
-      m_Game(m_Options.Seed != 0 ? m_Options.Seed : std::random_device{}())
+AsteroidsApp::AsteroidsApp(const Emerald::ApplicationSpec& spec, const GameInfo::Edition& edition,
+                           Options options, Settings settings, std::string highScoresFile,
+                           std::unique_ptr<GameMode> mode)
+    : Application(spec), m_Edition(edition), m_Options(std::move(options)), m_Settings(settings),
+      m_SettingsFile(Settings::DefaultPath(edition.FileName)),
+      m_HighScoresName(std::move(highScoresFile)), m_Game(std::move(mode)),
+      m_TitleMenu(MakeTitleMenu(*m_Game))
 {
+}
+
+Menu AsteroidsApp::MakeTitleMenu(const GameMode& mode)
+{
+    std::vector<std::string> items{"START GAME"};
+    for (std::string& extra : mode.GetTitleExtras())
+        items.push_back(std::move(extra));
+    items.push_back("OPTIONS");
+    items.push_back("QUIT GAME");
+    return Menu(std::move(items));
+}
+
+std::filesystem::path AsteroidsApp::GetUserFile(std::string_view name) const
+{
+    const std::filesystem::path folder =
+        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, m_Edition.FileName);
+    return folder.empty() ? folder : (folder / name).make_preferred();
 }
 
 // The controls are named actions bound to keys and gamepad inputs; the rest of the code only
@@ -175,7 +200,7 @@ void AsteroidsApp::BindControls()
 void AsteroidsApp::OnStart()
 {
     BindControls();
-    EM_INFO("{} {}; settings file: {}", GameInfo::kTitle, GameInfo::kVersion,
+    EM_INFO("{} {}; settings file: {}", m_Edition.Title, GameInfo::kVersion,
             m_SettingsFile.empty() ? "none" : m_SettingsFile.string());
     GetWindow().SetIcon(MakeIcon(64));
     ApplySettings();
@@ -199,7 +224,7 @@ void AsteroidsApp::OnStart()
 void AsteroidsApp::ApplyStartScreen()
 {
     const std::string& screen = m_Options.Screen;
-    const bool haveScores = !m_Game.GetHighScores().GetEntries().empty();
+    const bool haveScores = !m_Game->GetHighScores().GetEntries().empty();
     if (screen == "scores")
         m_TitleTime = TitleTimeFor(TitleScreen::Page::HighScores, haveScores);
     else if (screen == "controls")
@@ -209,11 +234,11 @@ void AsteroidsApp::ApplyStartScreen()
                       !m_Options.Saucer.empty() || m_Options.GameOverScore.has_value();
     if (!play)
         return;
-    m_Game.StartGame();
+    m_Game->StartGame();
     if (m_Options.Saucer == "large" || m_Options.Saucer == "small")
-        m_Game.SpawnSaucer(m_Options.Saucer == "large" ? SaucerSize::Large : SaucerSize::Small);
+        m_Game->SpawnSaucer(m_Options.Saucer == "large" ? SaucerSize::Large : SaucerSize::Small);
     if (m_Options.GameOverScore)
-        m_Game.ForceGameOver(*m_Options.GameOverScore);
+        m_Game->ForceGameOver(*m_Options.GameOverScore);
     if (screen == "pause" || screen == "options")
         Pause();
     if (screen == "options")
@@ -232,7 +257,8 @@ void AsteroidsApp::OnEvent(const SDL_Event& event)
         break;
     case SDL_EVENT_WINDOW_FOCUS_LOST:
         // Alt-tabbed away (or a notification took focus) mid-game: pause.
-        if (m_Overlays.empty() && !m_Game.IsOnTitle() && !m_Game.IsOnGameOverScreen())
+        if (m_Overlays.empty() && !m_Game->IsOnTitle() && !m_Game->IsOnGameOverScreen() &&
+            !m_Game->IsInMenuScreen())
             Pause();
         break;
     case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
@@ -276,12 +302,31 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
             CloseOverlay();
         else
             UpdateOverlay(menu);
-        if (!m_Game.IsOnTitle())
+        if (!m_Game->IsOnTitle())
             return; // paused
         m_TitleTime += dt;
-        m_Game.Update({}, dt); // the title screen's rocks keep drifting behind its menus
-        m_Effects.Update(m_Game, dt);
+        m_Game->Update({}, dt); // the title screen's rocks keep drifting behind its menus
+        m_Effects.Update(*m_Game, dt);
         PlayGameSounds();
+        OnGameStepped();
+        return;
+    }
+
+    // The mode's own screens (e.g. a shop) get the menu input, Esc included.
+    if (m_Game->IsInMenuScreen()) {
+        GameInput input;
+        input.MenuUpPressed = menu.Up;
+        input.MenuDownPressed = menu.Down;
+        input.MenuLeftPressed = menu.Left;
+        input.MenuRightPressed = menu.Right;
+        input.ConfirmPressed = menu.Confirm;
+        input.MenuBackPressed = menu.Back;
+        m_Game->Update(input, dt);
+        m_Effects.Update(*m_Game, dt);
+        PlayGameSounds();
+        OnGameStepped();
+        if (m_Game->IsOnTitle())
+            m_TitleTime = 0.0f;
         return;
     }
 
@@ -293,34 +338,37 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
     input.StartPressed = in.WasActionPressed("Start") && !alt;
     input.MenuUpPressed = menu.Up;
     input.MenuDownPressed = menu.Down;
+    input.MenuLeftPressed = menu.Left;
+    input.MenuRightPressed = menu.Right;
     input.ConfirmPressed = menu.Confirm;
     input.BackPressed = in.WasActionPressed("Back");
 
-    if (m_Game.IsOnTitle()) {
+    if (m_Game->IsOnTitle()) {
         m_TitleTime += dt;
         if (input.StartPressed || menu.Confirm)
-            m_Game.StartGame();
+            m_Game->StartGame();
         else if (pausePressed)
             OpenOverlay(Overlay::TitleMenu);
         input = {}; // nothing to steer on the title screen, and no shot from the start key
-    } else if (pausePressed && !(m_Game.IsOnGameOverScreen() && input.StartPressed)) {
+    } else if (pausePressed && !(m_Game->IsOnGameOverScreen() && input.StartPressed)) {
         Pause();
         return;
     }
-    const bool wasOnTitle = m_Game.IsOnTitle();
-    m_Game.Update(input, dt);
-    if (!wasOnTitle && m_Game.IsOnTitle())
+    const bool wasOnTitle = m_Game->IsOnTitle();
+    m_Game->Update(input, dt);
+    if (!wasOnTitle && m_Game->IsOnTitle())
         m_TitleTime = 0.0f; // the game over screen timed out
-    if (m_Game.ConsumeHighScoresChanged() && !m_HighScoresFile.empty())
-        m_Game.GetHighScores().Save(m_HighScoresFile);
+    if (m_Game->ConsumeHighScoresChanged() && !m_HighScoresFile.empty())
+        m_Game->GetHighScores().Save(m_HighScoresFile);
 
     // A short, heavy rumble when the ship is destroyed.
-    if (m_Game.GetShipsLost() != m_ShipsLost) {
-        m_ShipsLost = m_Game.GetShipsLost();
+    if (m_Game->GetShipsLost() != m_ShipsLost) {
+        m_ShipsLost = m_Game->GetShipsLost();
         in.Rumble(0.8f, 0.4f, 300);
     }
-    m_Effects.Update(m_Game, dt); // (reads the sounds, so before PlayGameSounds clears them)
+    m_Effects.Update(*m_Game, dt); // (reads the sounds, so before PlayGameSounds clears them)
     PlayGameSounds();
+    OnGameStepped();
 }
 
 void AsteroidsApp::OnUpdate(f32 /*dt*/)
@@ -368,14 +416,14 @@ void AsteroidsApp::OnRender2D(Emerald::Renderer2D& r)
     r.Begin(viewProjection, clip);
     DrawWorld(r);
     m_Effects.Draw(r, GetParticleDrawOptions());
-    if (!m_Game.IsOnTitle())
+    if (!m_Game->IsOnTitle())
         DrawHud(r);
     else if (m_Options.Screen == "logo")
-        TitleScreen::DrawCover(r, m_TitleTime);
+        TitleScreen::DrawCover(r, m_Edition, m_TitleTime);
     else if (m_Overlays.empty())
         TitleScreen::Draw(
-            r, m_Game,
-            TitleScreen::PageAt(m_TitleTime, !m_Game.GetHighScores().GetEntries().empty()),
+            r, m_Edition, *m_Game,
+            TitleScreen::PageAt(m_TitleTime, !m_Game->GetHighScores().GetEntries().empty()),
             m_Prompts.Start, m_PadLabels, m_TitleTime);
     DrawOverlay(r);
     // Outline the playfield when there are bars, so the wrap-around edges are visible.
@@ -391,9 +439,9 @@ void AsteroidsApp::OnImGui()
     ImGui::Begin("Debug");
     ImGui::Text("FPS: %.0f", static_cast<f64>(ImGui::GetIO().Framerate));
     ImGui::Text("Fixed update: %.0f Hz", static_cast<f64>(1.0f / GetFixedDeltaSeconds()));
-    ImGui::Text("Wave %u, %zu asteroids", m_Game.GetWave(), m_Game.GetAsteroidCount());
-    ImGui::Text("Score %u, lives %u%s", m_Game.GetScore(), m_Game.GetLives(),
-                m_Game.IsGameOver() ? " (game over)" : "");
+    ImGui::Text("Wave %u, %zu asteroids", m_Game->GetWave(), m_Game->GetAsteroidCount());
+    ImGui::Text("Score %u, lives %u%s", m_Game->GetScore(), m_Game->GetLives(),
+                m_Game->IsGameOver() ? " (game over)" : "");
     const Emerald::Renderer2D& r2d = GetRenderer2D();
     ImGui::Text("Particles: %u / %u", m_Effects.GetParticles().GetCount(),
                 m_Effects.GetParticles().GetCapacity());
@@ -401,13 +449,13 @@ void AsteroidsApp::OnImGui()
                 r2d.GetLastFrameSpriteCount(), r2d.GetLastFrameDrawCalls());
     // Testing shortcuts.
     if (ImGui::Button("Large saucer"))
-        m_Game.SpawnSaucer(SaucerSize::Large);
+        m_Game->SpawnSaucer(SaucerSize::Large);
     ImGui::SameLine();
     if (ImGui::Button("Small saucer"))
-        m_Game.SpawnSaucer(SaucerSize::Small);
+        m_Game->SpawnSaucer(SaucerSize::Small);
     ImGui::SameLine();
     if (ImGui::Button("Game over"))
-        m_Game.ForceGameOver(m_Game.GetScore());
+        m_Game->ForceGameOver(m_Game->GetScore());
     const Emerald::Gamepads& pads = GetInput().GetGamepads();
     for (usize i = 0; i < pads.GetCount(); ++i)
         ImGui::Text("Pad: %s (%s)", pads.GetInfo(i).Name.c_str(),
@@ -443,22 +491,20 @@ void AsteroidsApp::LoadSoundOverrides()
 // The table lives in the per-user folder (e.g. %APPDATA%\Ridejock\<game> on Windows).
 void AsteroidsApp::LoadHighScores()
 {
-    const std::filesystem::path folder =
-        Emerald::Paths::GetPrefPath(GameInfo::kOrganization, GameInfo::kFileName);
-    if (folder.empty()) {
+    m_HighScoresFile = GetUserFile(m_HighScoresName);
+    if (m_HighScoresFile.empty()) {
         EM_WARN("No folder for high scores: they will not be saved");
         return;
     }
-    m_HighScoresFile = (folder / m_HighScoresName).make_preferred();
     EM_INFO("High scores file: {}", m_HighScoresFile.string());
-    m_Game.SetHighScores(HighScoreTable::Load(m_HighScoresFile));
+    m_Game->SetHighScores(HighScoreTable::Load(m_HighScoresFile));
 }
 
 // Optional loops: `ambience` under the gameplay, `music` on the title and game over screens,
 // cross-faded when the state changes. Without those files (the release has none) nothing plays.
 void AsteroidsApp::UpdateBackgroundSounds()
 {
-    const bool gameOver = m_Game.IsGameOver();
+    const bool gameOver = m_Game->IsGameOver();
     if (m_BackgroundStarted && gameOver == m_WasGameOver)
         return;
     m_BackgroundStarted = true;
@@ -479,7 +525,7 @@ void AsteroidsApp::UpdateBackgroundSounds()
 void AsteroidsApp::PlayGameSounds()
 {
     Emerald::Audio& audio = GetAudio();
-    for (const GameSound& sound : m_Game.GetSounds()) {
+    for (const GameSound& sound : m_Game->GetSounds()) {
         const Emerald::Sound* s = nullptr;
         f32 volume = 1.0f;
         switch (sound.Event) {
@@ -518,25 +564,53 @@ void AsteroidsApp::PlayGameSounds()
         case SoundEvent::SaucerExplosion:
             s = &m_Sounds.ExplosionLarge;
             break;
+        case SoundEvent::ShieldHit:
+            s = &m_Sounds.ShieldHit;
+            break;
+        case SoundEvent::Upgrade:
+            s = &m_Sounds.Upgrade;
+            break;
+        case SoundEvent::Purchase:
+            s = &m_Sounds.Purchase;
+            break;
+        case SoundEvent::MetalHit:
+            s = &m_Sounds.MetalHit;
+            volume = 0.7f;
+            break;
+        case SoundEvent::Blast:
+            s = &m_Sounds.Blast;
+            break;
+        case SoundEvent::MissileLaunch:
+            s = &m_Sounds.MissileLaunch;
+            volume = 0.6f;
+            break;
+        case SoundEvent::BossAlarm:
+            s = &m_Sounds.BossAlarm;
+            break;
+        case SoundEvent::BossExplosion:
+            s = &m_Sounds.BossExplosion;
+            break;
         }
         if (s)
             audio.Play(*s, {.Volume = volume * GetSfxVolume(), .Pan = sound.Pan});
         // Explosions shake the screen a little (the ship's a lot).
         if (sound.Event == SoundEvent::ShipExplosion)
             AddShake(9.0f);
-        else if (sound.Event == SoundEvent::SaucerExplosion)
+        else if (sound.Event == SoundEvent::SaucerExplosion || sound.Event == SoundEvent::Blast)
             AddShake(5.0f);
+        else if (sound.Event == SoundEvent::BossExplosion)
+            AddShake(14.0f);
         else if (sound.Event == SoundEvent::ExplosionLarge)
             AddShake(3.0f);
         else if (sound.Event == SoundEvent::ExplosionMedium)
             AddShake(1.5f);
     }
-    m_Game.ClearSounds();
+    m_Game->ClearSounds();
 
     // Thrust loop: fades in when the engine fires, fades out when it stops (also on death and
     // game over, since IsThrusting is false then).
     // On every start a new voice: the previous one may still be fading out.
-    const bool thrusting = m_Game.IsThrusting();
+    const bool thrusting = m_Game->IsThrusting();
     if (thrusting && !m_WasThrusting)
         m_ThrustVoice = audio.Play(
             m_Sounds.Thrust, {.Volume = 0.45f * GetSfxVolume(), .Loop = true, .FadeInMs = 40.0f});
@@ -546,7 +620,7 @@ void AsteroidsApp::PlayGameSounds()
 
     // Saucer siren: loops while a saucer is on screen, fades out when it is destroyed, flies
     // off or the game ends.
-    const std::optional<SaucerSize> saucer = m_Game.GetSaucerSize();
+    const std::optional<SaucerSize> saucer = m_Game->GetSaucerSize();
     if (saucer != m_SaucerSound) {
         audio.Stop(m_SaucerVoice, 150.0f);
         if (saucer)
@@ -570,7 +644,7 @@ void AsteroidsApp::UpdatePrompts()
         prompts.Back = label(GamepadButton::East) + " / BACKSPACE";
     }
     m_Prompts = prompts;
-    m_Game.SetPrompts(std::move(prompts));
+    m_Game->SetPrompts(std::move(prompts));
 
     m_PadLabels = {};
     if (pads.GetCount() > 0) {
@@ -617,7 +691,7 @@ void AsteroidsApp::Pause()
 void AsteroidsApp::QuitToTitle()
 {
     m_Overlays.clear();
-    m_Game.ShowTitle();
+    m_Game->ShowTitle();
     m_Effects.Clear();
     m_TitleTime = 0.0f;
 }
@@ -630,17 +704,19 @@ void AsteroidsApp::UpdateOverlay(const MenuInput& input)
         if (action == MenuAction::Back) {
             CloseOverlay();
         } else if (action == MenuAction::Confirm) {
-            switch (m_TitleMenu.GetSelected()) {
-            case 0:
+            // START GAME, the mode's extras, OPTIONS, QUIT GAME.
+            const usize selected = m_TitleMenu.GetSelected();
+            const usize extras = m_TitleMenu.GetCount() - 3;
+            if (selected == 0) {
                 CloseOverlay();
-                m_Game.StartGame();
-                break;
-            case 1:
+                m_Game->StartGame();
+            } else if (selected <= extras) {
+                CloseOverlay();
+                m_Game->OpenTitleExtra(selected - 1);
+            } else if (selected == extras + 1) {
                 OpenOverlay(Overlay::Options);
-                break;
-            default:
+            } else {
                 Quit();
-                break;
             }
         }
         break;
@@ -742,7 +818,7 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
     const auto onOff = [](bool value) { return std::string(value ? "ON" : "OFF"); };
     switch (m_Overlays.back()) {
     case Overlay::TitleMenu:
-        TitleScreen::DrawLogo(r, GameInfo::kTitle, 150.0f, 900.0f, m_TitleTime);
+        TitleScreen::DrawLogo(r, m_Edition.Title, 150.0f, 900.0f, m_TitleTime);
         m_TitleMenu.Draw(r, "", 250.0f, {}, m_MenuTime);
         break;
     case Overlay::PauseMenu:

@@ -12,57 +12,13 @@
 
 #include "Asteroid.h"
 #include "Bullet.h"
+#include "GameMode.h"
 #include "HighScores.h"
 #include "Random.h"
 #include "Saucer.h"
 #include "Ship.h"
 
 namespace Asteroids {
-
-// Player input for one fixed step. The "pressed" flags are true only in the step the key went
-// down (Emerald's Input takes care of that), so holding Space does not auto-fire.
-struct GameInput {
-    ShipControls Ship;
-    bool FirePressed = false;
-    bool HyperspacePressed = false;
-    bool StartPressed = false;
-    // Menu input for entering initials (Main repeats Up/Down while held).
-    bool MenuUpPressed = false;
-    bool MenuDownPressed = false;
-    bool ConfirmPressed = false;
-    bool BackPressed = false;
-};
-
-// Texts that depend on the device (keyboard vs. gamepad and its button labels); set by Main.
-struct Prompts {
-    std::string Start = "PRESS ENTER";    // game over screen
-    std::string Confirm = "FIRE / ENTER"; // initials entry: next letter
-    std::string Back = "BACKSPACE";       // initials entry: previous letter
-};
-
-// Sounds the game asks for. The game only reports what happened; Main.cpp plays the sounds, so
-// the game logic stays free of audio (and testable without a device).
-enum class SoundEvent : u8 {
-    Fire,
-    ExplosionLarge,
-    ExplosionMedium,
-    ExplosionSmall,
-    ShipExplosion,
-    ExtraLife,
-    Hyperspace,
-    BeatHigh, // the two alternating heartbeat tones
-    BeatLow,
-    SaucerFire,
-    SaucerExplosion,
-};
-
-// Something that makes a noise. The app also spawns its particle effects from these.
-struct GameSound {
-    SoundEvent Event;
-    f32 Pan = 0.0f;  // -1 (left edge) .. +1 (right edge), from where it happened
-    Vec2 Position{}; // where it happened
-    Vec2 Velocity{}; // of the thing that made it (e.g. a rock that broke), if it moved
-};
 
 // A short-lived bit of an explosion: a dot, or a spinning line when Length > 0.
 struct Particle {
@@ -79,22 +35,23 @@ struct Particle {
 // it input at a fixed rate (Update). How the world looks is up to the executable (vector lines or
 // pixel sprites), which reads the state through the getters below; the HUD (vector font) is
 // shared and drawn by DrawHud.
-class Game {
+class Game final : public GameMode {
 public:
     // Starts on the title screen (see ShowTitle).
     explicit Game(u32 seed);
 
     // The title screen's background: a few rocks drifting, no ship, no score. The app draws
     // the logo and menus on top.
-    void ShowTitle();
+    void ShowTitle() override;
     // A new game: 3 ships, score 0, wave 1.
-    void StartGame();
-    [[nodiscard]] bool IsOnTitle() const { return m_State == State::Attract; }
+    void StartGame() override;
+    [[nodiscard]] bool IsOnTitle() const override { return m_State == State::Attract; }
 
-    void Update(const GameInput& input, f32 dt);
+    void Update(const GameInput& input, f32 dt) override;
     // Score, lives, high score, banners, initials entry and the high score table, in playfield
     // coordinates. `drawLives` = false leaves the remaining-ships icons to the caller.
-    void DrawHud(Emerald::Renderer2D& r, bool drawLives = true) const;
+    void DrawHud(Emerald::Renderer2D& r, bool drawLives) const;
+    void DrawHud(Emerald::Renderer2D& r) const override { DrawHud(r, true); }
     // Where the HUD shows the i-th remaining ship (center, playfield coordinates).
     [[nodiscard]] static Vec2 GetLifeIconPosition(u32 index)
     {
@@ -102,7 +59,7 @@ public:
     }
 
     // --- What there is to draw ---
-    [[nodiscard]] const Ship& GetShip() const { return m_Ship; }
+    [[nodiscard]] const Ship& GetShip() const override { return m_Ship; }
     // False while the ship is exploded/respawning, and during the invulnerability blink's off
     // phases.
     [[nodiscard]] bool IsShipVisible() const;
@@ -116,51 +73,51 @@ public:
     // Seconds since the game object was created (for blinking and other animation).
     [[nodiscard]] f32 GetTime() const { return m_Time; }
 
-    [[nodiscard]] u32 GetScore() const { return m_Score; }
+    [[nodiscard]] u32 GetScore() const override { return m_Score; }
     [[nodiscard]] u32 GetLives() const { return m_Lives; }
-    [[nodiscard]] u32 GetWave() const { return m_Wave; }
-    [[nodiscard]] usize GetAsteroidCount() const { return m_Asteroids.size(); }
+    [[nodiscard]] u32 GetWave() const override { return m_Wave; }
+    [[nodiscard]] usize GetAsteroidCount() const override { return m_Asteroids.size(); }
     // True unless a game is being played: while entering initials, on the game over screen and
     // on the title screen.
-    [[nodiscard]] bool IsGameOver() const { return m_State != State::Playing; }
+    [[nodiscard]] bool IsGameOver() const override { return m_State != State::Playing; }
     // True while the player controls a ship (the app pauses then when the window loses focus).
     [[nodiscard]] bool IsPlaying() const { return m_State == State::Playing; }
     // On the game over screen with the table shown (Start restarts from here).
-    [[nodiscard]] bool IsOnGameOverScreen() const { return m_State == State::GameOver; }
+    [[nodiscard]] bool IsOnGameOverScreen() const override { return m_State == State::GameOver; }
     [[nodiscard]] bool IsEnteringInitials() const { return m_State == State::EnterInitials; }
     // True while the ship is alive and its engine fires (for the looping thrust sound).
-    [[nodiscard]] bool IsThrusting() const
+    [[nodiscard]] bool IsThrusting() const override
     {
         return m_State == State::Playing && m_ShipAlive && m_Ship.Thrusting;
     }
     // Sounds requested since the last ClearSounds (call both after every Update).
-    [[nodiscard]] const std::vector<GameSound>& GetSounds() const { return m_Sounds; }
-    void ClearSounds() { m_Sounds.clear(); }
+    [[nodiscard]] const std::vector<GameSound>& GetSounds() const override { return m_Sounds; }
+    void ClearSounds() override { m_Sounds.clear(); }
     // Counts every destroyed ship, so the app can react (e.g. rumble) when it changes.
-    [[nodiscard]] u32 GetShipsLost() const { return m_ShipsLost; }
-    void SetPrompts(Prompts prompts) { m_Prompts = std::move(prompts); }
+    [[nodiscard]] u32 GetShipsLost() const override { return m_ShipsLost; }
+    void SetPrompts(Prompts prompts) override { m_Prompts = std::move(prompts); }
 
     // The saucer currently on screen, if any (Main plays its looping sound).
-    [[nodiscard]] std::optional<SaucerSize> GetSaucerSize() const
+    [[nodiscard]] std::optional<SaucerSize> GetSaucerSize() const override
     {
         return m_Saucer ? std::optional(m_Saucer->Size) : std::nullopt;
     }
 
     // High scores: Main loads them at startup and saves them whenever they change.
-    void SetHighScores(HighScoreTable table) { m_HighScores = std::move(table); }
-    [[nodiscard]] const HighScoreTable& GetHighScores() const { return m_HighScores; }
+    void SetHighScores(HighScoreTable table) override { m_HighScores = std::move(table); }
+    [[nodiscard]] const HighScoreTable& GetHighScores() const override { return m_HighScores; }
     // True once after a new entry was added (then it's false until the next one).
-    [[nodiscard]] bool ConsumeHighScoresChanged()
+    [[nodiscard]] bool ConsumeHighScoresChanged() override
     {
         return std::exchange(m_HighScoresChanged, false);
     }
 
     // Debug helpers (command line / debug panel): a saucer right now, or game over with `score`.
-    void SpawnSaucer(SaucerSize size);
-    void ForceGameOver(u32 score);
+    void SpawnSaucer(SaucerSize size) override;
+    void ForceGameOver(u32 score) override;
 
     // The top 10 at `top` (playfield y), for the game over and title screens.
-    void DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const;
+    void DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const override;
 
 private:
     enum class State { Attract, Playing, EnterInitials, GameOver };

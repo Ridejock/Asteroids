@@ -1,26 +1,30 @@
-# Release package of the vector game (the one that is published):
+# Release packages, one zip per game (each is published on its own):
 #
 #   cmake --preset release
 #   cmake --build --preset release --target package
-#   -> build/release/<GameFileName>-<version>-windows-x64.zip
+#   -> build/release/<GAME_FILE_NAME>-<version>-windows-x64.zip   (vector game, component Game)
+#   -> build/release/<PIXEL_FILE_NAME>-<version>-windows-x64.zip  (pixel roguelike, component Rogue)
 #
-# It contains only what a player needs: the .exe, its compiled shaders, README.txt, LICENSE.txt
-# and THIRD_PARTY_LICENSES.txt. NOTHING from assets/ is installed: the vector game needs no
-# files, and player-supplied sound overrides (assets/sounds/, often copyrighted) must never ship.
+# Each contains only what a player needs: the .exe, its compiled shaders, README.txt,
+# LICENSE.txt and THIRD_PARTY_LICENSES.txt; the roguelike also its sprites (assets/pixel/).
+# Nothing else from assets/ is installed: player-supplied sound overrides (assets/sounds/, often
+# copyrighted) must never ship.
 # (`cmake --install build/release --component Game --prefix <dir>` gives the same files unzipped.)
 
 set(package_dir "${CMAKE_BINARY_DIR}/package")
 
-# README.txt with the title, version and controls.
+# README.txt with the title, version and controls (one per game).
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/README.txt.in" "${package_dir}/README.txt"
                @ONLY NEWLINE_STYLE CRLF)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/README-rogue.txt.in"
+               "${package_dir}/rogue/README.txt" @ONLY NEWLINE_STYLE CRLF)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "${package_dir}/LICENSE.txt" COPYONLY)
 
 # THIRD_PARTY_LICENSES.txt: the license texts of everything linked into the .exe, taken from the
 # fetched sources, so they always match the pinned versions.
 set(notices "${package_dir}/THIRD_PARTY_LICENSES.txt")
 file(WRITE "${notices}"
-     "${GAME_TITLE} uses the following libraries. Their licenses follow.\n\n")
+     "This game uses the following libraries. Their licenses follow.\n\n")
 function(_add_notice title file)
     if(NOT EXISTS "${file}")
         message(FATAL_ERROR "License file not found: ${file}")
@@ -67,6 +71,15 @@ install(DIRECTORY "$<TARGET_FILE_DIR:Asteroids>/shaders/" DESTINATION shaders CO
 install(FILES "${package_dir}/README.txt" "${package_dir}/LICENSE.txt" "${notices}"
         DESTINATION . COMPONENT Game)
 
+# The roguelike ("Rogue" component): the same, plus its sprites.
+install(TARGETS AsteroidsPixel RUNTIME DESTINATION . COMPONENT Rogue)
+install(DIRECTORY "$<TARGET_FILE_DIR:AsteroidsPixel>/shaders/" DESTINATION shaders
+        COMPONENT Rogue)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/" DESTINATION assets/pixel
+        COMPONENT Rogue FILES_MATCHING PATTERN "atlas.*")
+install(FILES "${package_dir}/rogue/README.txt" "${package_dir}/LICENSE.txt" "${notices}"
+        DESTINATION . COMPONENT Rogue)
+
 if(WIN32)
     set(package_platform windows)
 elseif(APPLE)
@@ -84,6 +97,8 @@ set(CPACK_PACKAGE_VENDOR "Ervin Ashley")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "${GAME_FILE_NAME}-${PROJECT_VERSION}-${package_platform}")
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF) # the .exe at the top of the zip
-set(CPACK_COMPONENTS_ALL Game)
-set(CPACK_ARCHIVE_COMPONENT_INSTALL OFF) # one zip for all (i.e. the one) components
+set(CPACK_COMPONENTS_ALL Game Rogue)
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON) # one zip per component, named:
+set(CPACK_ARCHIVE_GAME_FILE_NAME "${GAME_FILE_NAME}-${PROJECT_VERSION}-${package_platform}")
+set(CPACK_ARCHIVE_ROGUE_FILE_NAME "${PIXEL_FILE_NAME}-${PROJECT_VERSION}-${package_platform}")
 include(CPack)

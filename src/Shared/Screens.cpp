@@ -5,8 +5,8 @@
 #include <iterator>
 #include <utility>
 
-#include "Game.h"
 #include "GameInfo.h"
+#include "GameMode.h"
 #include "Playfield.h"
 #include "VectorFont.h"
 
@@ -67,18 +67,18 @@ void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 m
                                  height, core);
 }
 
-void DrawCover(Emerald::Renderer2D& r, f32 time)
+void DrawCover(Emerald::Renderer2D& r, const GameInfo::Edition& edition, f32 time)
 {
-    DrawLogo(r, GameInfo::kTitle, kPlayfieldCenter.y - 30.0f, 800.0f, time);
-    VectorFont::DrawTextCentered(r, "A VECTOR ARCADE SHOOTER", kPlayfieldCenter.x,
-                                 kPlayfieldCenter.y + 70.0f, 24.0f, kDim);
+    DrawLogo(r, edition.Title, kPlayfieldCenter.y - 30.0f, 800.0f, time);
+    VectorFont::DrawTextCentered(r, edition.Tagline, kPlayfieldCenter.x, kPlayfieldCenter.y + 70.0f,
+                                 24.0f, kDim);
 }
 
-void Draw(Emerald::Renderer2D& r, const Game& game, Page page, std::string_view startPrompt,
-          const PadLabels& pad, f32 time)
+void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMode& game, Page page,
+          std::string_view startPrompt, const PadLabels& pad, f32 time)
 {
     const f32 centerX = kPlayfieldCenter.x;
-    DrawLogo(r, GameInfo::kTitle, 190.0f, 980.0f, time);
+    DrawLogo(r, edition.Title, 190.0f, 980.0f, time);
 
     switch (page) {
     case Page::PressStart:

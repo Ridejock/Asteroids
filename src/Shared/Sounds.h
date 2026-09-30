@@ -23,6 +23,15 @@ struct Sounds {
     Emerald::Sound SaucerLarge; // warbling loops while a saucer is on screen: low and slow...
     Emerald::Sound SaucerSmall; // ...or high and fast
     Emerald::Sound SaucerFire;  // the saucer's (thinner) shot
+    // Only the roguelike (pixel version) plays these.
+    Emerald::Sound ShieldHit;     // a bright "zap" as the shield takes the hit
+    Emerald::Sound Upgrade;       // rising arpeggio: an upgrade picked
+    Emerald::Sound Purchase;      // two coin-like blips
+    Emerald::Sound MetalHit;      // short metallic clank
+    Emerald::Sound Blast;         // deep punchy explosion (explosive rocks, hyperspace blast)
+    Emerald::Sound MissileLaunch; // soft hiss
+    Emerald::Sound BossAlarm;     // two-tone klaxon
+    Emerald::Sound BossExplosion; // very long, very deep crash
     // No generated versions of these two: empty unless the player supplies a file.
     Emerald::Sound Music;    // loops on the game over screen
     Emerald::Sound Ambience; // loops quietly under the gameplay
