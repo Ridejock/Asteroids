@@ -1,6 +1,7 @@
-# Builds the Windows release zip of the vector game on every push to main (and on pull
-# requests), and uploads it as a workflow artifact. Pushing a tag like v1.0.0 also attaches the
-# zip to a GitHub release of that tag.
+# Builds the Windows release zips on every push to main (and on pull requests) and uploads them
+# as workflow artifacts: the vector game (RockBlaster-...) and the pixel roguelike
+# (RockBlasterRogue-...). Pushing a tag like v1.0.0 also attaches the vector game's zip to a
+# GitHub release of that tag (the roguelike is published separately).
 name: Windows release
 
 on:
@@ -63,26 +64,38 @@ jobs:
           path: shadercross-bin
           key: shadercross-windows-x64-v1
 
-      - name: Find the zip
+      - name: Find the zips
         id: zip
         shell: bash
         run: |
-          zip=$(ls build/release/*-windows-x64.zip)
-          echo "Package: $zip"
-          cmake -E tar tf "$zip"
-          # A shader compiler without DXC silently drops the Direct3D 12 shaders; never ship that.
-          cmake -E tar tf "$zip" | grep -q 'shaders/Renderer2D.frag.dxil' || { echo "::error::No DXIL shaders in the zip"; exit 1; }
-          echo "path=$zip" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename "$zip" .zip)" >> "$GITHUB_OUTPUT"
+          # One zip per game; the pixel roguelike's is the one with the sprites (assets/pixel/).
+          for zip in build/release/*-windows-x64.zip; do
+            echo "Package: $zip"
+            cmake -E tar tf "$zip"
+            # A shader compiler without DXC silently drops the Direct3D 12 shaders; never ship that.
+            cmake -E tar tf "$zip" | grep -q 'shaders/Renderer2D.frag.dxil' || { echo "::error::No DXIL shaders in $zip"; exit 1; }
+            game=vector
+            cmake -E tar tf "$zip" | grep -q 'assets/pixel/atlas.png' && game=pixel
+            echo "${game}_path=$zip" >> "$GITHUB_OUTPUT"
+            echo "${game}_name=$(basename "$zip" .zip)" >> "$GITHUB_OUTPUT"
+          done
+          grep -q '^vector_path=' "$GITHUB_OUTPUT" || { echo "::error::No vector game zip"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.zip.outputs.name }}
-          path: ${{ steps.zip.outputs.path }}
+          name: ${{ steps.zip.outputs.vector_name }}
+          path: ${{ steps.zip.outputs.vector_path }}
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: steps.zip.outputs.pixel_path != ''
+        with:
+          name: ${{ steps.zip.outputs.pixel_name }}
+          path: ${{ steps.zip.outputs.pixel_path }}
           if-no-files-found: error
 
       - name: Attach to the GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.zip.outputs.path }}
+          files: ${{ steps.zip.outputs.vector_path }}
