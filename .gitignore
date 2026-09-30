@@ -32,3 +32,6 @@ logs/
 # Player-supplied sound overrides (often copyrighted): never committed, only the README
 assets/sounds/*
 !assets/sounds/README.md
+
+# Unprocessed sprite generator output: only the cut-out sprites and the atlas are committed
+assets/pixel/*_raw.png

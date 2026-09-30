@@ -45,9 +45,10 @@ FetchContent_Declare(Emerald
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
 
 # ---------------------------------------------------------------------------
-# The game: one library with everything shared (rules, collisions, scoring, high scores, sounds,
-# controls, the app loop and HUD), and a small executable that draws the world:
+# The game: one library with everything both versions share (rules, collisions, scoring, high
+# scores, sounds, controls, the app loop and HUD), and one small executable per look:
 #   Asteroids       vector lines, like the arcade original (src/Vector)
+#   AsteroidsPixel  pixel-art sprites from assets/pixel (src/Pixel)
 # ---------------------------------------------------------------------------
 add_library(AsteroidsShared STATIC
     src/Shared/AsteroidsApp.cpp
@@ -75,6 +76,7 @@ target_link_libraries(AsteroidsShared PUBLIC Emerald::Emerald)
 emerald_set_warnings(AsteroidsShared) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
 
 add_executable(Asteroids src/Vector/Main.cpp)
+add_executable(AsteroidsPixel src/Pixel/Main.cpp)
 
 # assets/ (the pixel sprites, and the optional player-supplied sounds in assets/sounds, which are
 # not in git) is copied next to the executables. A custom target instead of a POST_BUILD step, so
@@ -88,7 +90,7 @@ add_custom_target(AsteroidsAssets
     VERBATIM
 )
 
-foreach(game Asteroids)
+foreach(game Asteroids AsteroidsPixel)
     target_link_libraries(${game} PRIVATE AsteroidsShared)
     # The games have no shaders of their own; this compiles the engine's (Renderer2D) into
     # bin/shaders/ and tells the code which formats exist (EMERALD_SHADER_FORMATS).
