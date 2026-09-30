@@ -35,10 +35,13 @@ const Vec4 kPlayerBulletColor{1.0f, 0.95f, 0.6f, 1.0f};
 const Vec4 kSaucerBulletColor{1.0f, 0.3f, 0.45f, 1.0f};
 } // namespace Look
 
+// (Tint is a Vec3 plus Brightness rather than a Vec4: Vec4 is 16-byte aligned, which would pad
+// this struct and trigger MSVC warning C4324.)
 struct Star {
     Vec2 Position;
     f32 Size = 1.0f;
-    Vec4 Color{1.0f, 1.0f, 1.0f, 1.0f};
+    Emerald::Vec3 Tint{1.0f, 1.0f, 1.0f};
+    f32 Brightness = 1.0f;
     f32 TwinkleSpeed = 1.0f;
     f32 TwinklePhase = 0.0f;
 };
@@ -196,10 +199,10 @@ private:
             star.Size = random.Chance(0.15f) ? 2.0f : 1.0f;
             const f32 brightness = random.Float(0.25f, 0.8f);
             const f32 hue = random.Float(0.0f, 1.0f);
-            const Vec4 tint = hue < 0.15f   ? Vec4(0.7f, 0.8f, 1.0f, 1.0f)  // blue
-                              : hue < 0.25f ? Vec4(1.0f, 0.9f, 0.7f, 1.0f)  // warm
-                                            : Vec4(1.0f, 1.0f, 1.0f, 1.0f); // white
-            star.Color = {tint.x, tint.y, tint.z, brightness};
+            star.Tint = hue < 0.15f   ? Emerald::Vec3(0.7f, 0.8f, 1.0f)  // blue
+                        : hue < 0.25f ? Emerald::Vec3(1.0f, 0.9f, 0.7f)  // warm
+                                      : Emerald::Vec3(1.0f, 1.0f, 1.0f); // white
+            star.Brightness = brightness;
             star.TwinkleSpeed = random.Float(0.5f, 2.5f);
             star.TwinklePhase = random.Float(0.0f, Emerald::TwoPi);
             m_Stars.push_back(star);
@@ -211,8 +214,9 @@ private:
         if (!m_White)
             return;
         for (const Star& star : m_Stars) {
-            Vec4 color = star.Color;
-            color.w *= 0.7f + 0.3f * std::sin(time * star.TwinkleSpeed + star.TwinklePhase);
+            const f32 twinkle =
+                0.7f + 0.3f * std::sin(time * star.TwinkleSpeed + star.TwinklePhase);
+            const Vec4 color{star.Tint.x, star.Tint.y, star.Tint.z, star.Brightness * twinkle};
             DrawSquare(r, star.Position, star.Size, color);
         }
     }
