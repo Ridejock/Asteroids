@@ -1,4 +1,4 @@
-# ROCK DRIFT (working title)
+# ROCK BLASTER
 
 A small, readable vector arcade shooter in the spirit of the 1970s/80s vector games: steer a ship
 through drifting rocks, shoot them into smaller pieces and dodge flying saucers. Built with the
@@ -11,16 +11,16 @@ other game.
 It comes in two versions that play exactly the same (same rules, sounds, controls and code, apart
 from drawing):
 
-- **Vector** (target `Asteroids`, `RockDrift.exe`): everything on screen (ship, rocks, bullets,
+- **Vector** (target `Asteroids`, `RockBlaster.exe`): everything on screen (ship, rocks, bullets,
   explosions, the logo, even the score digits and letters) is drawn with lines by Emerald's
   `Renderer2D`; there are no textures or font files. **This is the released game.**
-- **Pixel** (target `AsteroidsPixel`, `RockDriftPixel.exe`): sprites from `assets/pixel/` (one
+- **Pixel** (target `AsteroidsPixel`, `RockBlasterPixel.exe`): sprites from `assets/pixel/` (one
   texture atlas) over a twinkling starfield, with small pixel bullets and sparks. The text keeps
   the vector font. Not part of the release.
 
 ## The game's name
 
-"ROCK DRIFT" is a placeholder. The title exists in exactly one place, the CMake cache variable
+The game is called "ROCK BLASTER". The title exists in exactly one place, the CMake cache variable
 **`GAME_TITLE`** at the top of `CMakeLists.txt`:
 
 ```sh
@@ -168,11 +168,12 @@ the pixel one. With the default name the folder is:
 
 | OS | Folder |
 |---|---|
-| Windows | `%APPDATA%\Ridejock\RockDrift\` (e.g. `C:\Users\you\AppData\Roaming\...`) |
-| Linux | `~/.local/share/Ridejock/RockDrift/` |
-| macOS | `~/Library/Application Support/Ridejock/RockDrift/` |
+| Windows | `%APPDATA%\Ridejock\RockBlaster\` (e.g. `C:\Users\you\AppData\Roaming\...`) |
+| Linux | `~/.local/share/Ridejock/RockBlaster/` |
+| macOS | `~/Library/Application Support/Ridejock/RockBlaster/` |
 
-(Older builds used `Ridejock/Asteroids/`; move `highscores.txt` over to keep an old table.)
+(Older builds used `Ridejock/Asteroids/` or, before the final name, `Ridejock/RockDrift/`; move
+`highscores.txt` and `settings.txt` over to keep them.)
 
 The log shows the exact path at startup (`High scores file: ...`). Each line is initials, a space,
 and the score, e.g. `ABC 12340` (initials are always 3 characters and may contain spaces). A missing
@@ -200,7 +201,7 @@ built automatically.
    Release / Debug (ImGui debug overlay)) in the status bar.
 3. **Build** (F7), then **Run/Debug** the `Asteroids` or `AsteroidsPixel` target (pick it as the
    launch target in the status bar; Shift+F5 / Ctrl+F5). The executables are
-   `build\<preset>\bin\RockDrift.exe` and `RockDriftPixel.exe`, sharing the compiled shaders in
+   `build\<preset>\bin\RockBlaster.exe` and `RockBlasterPixel.exe`, sharing the compiled shaders in
    `build\<preset>\bin\shaders\` and the copied `assets\`.
 
 From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
@@ -208,8 +209,8 @@ From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
 ```powershell
 cmake --preset debug
 cmake --build --preset debug
-.\build\debug\bin\RockDrift.exe
-.\build\debug\bin\RockDriftPixel.exe
+.\build\debug\bin\RockBlaster.exe
+.\build\debug\bin\RockBlasterPixel.exe
 ```
 
 ### Linux / macOS
@@ -217,8 +218,8 @@ cmake --build --preset debug
 ```sh
 cmake --preset debug
 cmake --build --preset debug
-./build/debug/bin/RockDrift
-./build/debug/bin/RockDriftPixel
+./build/debug/bin/RockBlaster
+./build/debug/bin/RockBlasterPixel
 ```
 
 (On Linux, SDL3 needs the usual X11/Wayland development packages; see Emerald's README.)
@@ -244,18 +245,18 @@ ctest --test-dir build/debug --output-on-failure
 Both executables take the same options:
 
 ```sh
-RockDrift --frames 600                        # quit after 600 frames
-RockDrift --frames 600 --screenshot shot.png  # save the last frame as a PNG
-RockDrift --seed 42                           # repeatable asteroid layout
-RockDrift --screen options                    # start on: title, scores, controls (title pages),
+RockBlaster --frames 600                        # quit after 600 frames
+RockBlaster --frames 600 --screenshot shot.png  # save the last frame as a PNG
+RockBlaster --seed 42                           # repeatable asteroid layout
+RockBlaster --screen options                    # start on: title, scores, controls (title pages),
                                               #   play, pause, options, or logo (store cover)
-RockDrift --saucer small                      # testing: a game with a saucer (large|small)
-RockDrift --game-over 12345                   # testing: end at once with this score
+RockBlaster --saucer small                      # testing: a game with a saucer (large|small)
+RockBlaster --game-over 12345                   # testing: end at once with this score
 ```
 
 The debug-full build's ImGui panel also has *Large saucer*, *Small saucer* and *Game over* buttons.
 
-The log is written to `logs/RockDrift.log` (`logs/RockDriftPixel.log` for the pixel version) in
+The log is written to `logs/RockBlaster.log` (`logs/RockBlasterPixel.log` for the pixel version) in
 the per-user folder (see [High scores](#high-scores)), so it works from a read-only install too. If the pixel version cannot find its sprites (`assets/pixel/` next to the
 executable) it logs an error and draws the objects' outlines instead.
 
@@ -267,10 +268,10 @@ The release is a zip of the vector version for 64-bit Windows:
 cmake --preset release
 cmake --build --preset release
 cmake --build --preset release --target package
-# -> build\release\RockDrift-1.0.0-windows-x64.zip
+# -> build\release\RockBlaster-1.0.0-windows-x64.zip
 ```
 
-It contains `RockDrift.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
+It contains `RockBlaster.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
 runs on a clean Windows 10/11 PC), the compiled `shaders\` folder, `README.txt` (controls, rules,
 credits, generated from `packaging/README.txt.in`), `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`
 (the licenses of Emerald, SDL3 with HIDAPI, spdlog + {fmt}, stb, nlohmann/json and dr_mp3, taken
@@ -290,7 +291,7 @@ git tag v1.0.0 && git push origin v1.0.0
 on itch.io; `butler login` once):
 
 ```sh
-butler push RockDrift-1.0.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.0.0
+butler push RockBlaster-1.0.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.0.0
 ```
 
 The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship

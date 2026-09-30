@@ -13,10 +13,10 @@ project(Asteroids
 # ---------------------------------------------------------------------------
 # The game's public name: set it here (or with -DGAME_TITLE="...") and nothing else. It is used
 # for the window title, the title screen logo, the .exe name and version resource, the per-user
-# folder and the release zip. GAME_FILE_NAME is derived from it ("ROCK DRIFT" -> "RockDrift")
+# folder and the release zip. GAME_FILE_NAME is derived from it ("ROCK BLASTER" -> "RockBlaster")
 # unless set explicitly.
 # ---------------------------------------------------------------------------
-set(GAME_TITLE "ROCK DRIFT" CACHE STRING "The game's public name (upper case looks best)")
+set(GAME_TITLE "ROCK BLASTER" CACHE STRING "The game's public name (upper case looks best)")
 set(GAME_FILE_NAME "" CACHE STRING "File/folder name of the game (empty = from GAME_TITLE)")
 set(game_file_name "${GAME_FILE_NAME}")
 if(NOT game_file_name)
@@ -136,8 +136,8 @@ foreach(game Asteroids AsteroidsPixel)
     add_dependencies(${game} AsteroidsAssets)
 endforeach()
 
-# The .exe files are named after the game: e.g. RockDrift.exe and RockDriftPixel.exe (the targets
-# keep their names).
+# The .exe files are named after the game: e.g. RockBlaster.exe and RockBlasterPixel.exe (the
+# targets keep their names).
 set_target_properties(Asteroids PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}")
 set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}Pixel")
 
