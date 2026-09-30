@@ -35,6 +35,10 @@ inline constexpr f32 kPageSeconds = 7.0f;
 // `centerY`, at most `maxWidth` wide.
 void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 maxWidth, f32 time);
 
+// The store page cover: the logo (narrow enough for a 630 x 500 crop of the playfield's middle)
+// and a tagline, nothing else.
+void DrawCover(Emerald::Renderer2D& r, f32 time);
+
 // The whole overlay: logo, the current page, credits and version. `startPrompt` is e.g.
 // "PRESS ENTER" or "PRESS START / ENTER".
 void Draw(Emerald::Renderer2D& r, const Game& game, Page page, std::string_view startPrompt,

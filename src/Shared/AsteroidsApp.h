@@ -22,7 +22,7 @@ namespace Asteroids {
 //   --saucer large|small   start a game with a saucer right away
 //   --game-over SCORE      start a game and end it at once with that score (initials entry)
 //   --screen NAME          start on: title, scores, controls (title screen pages), play,
-//                          pause, options
+//                          pause, options, or logo (just the logo and a tagline: store cover)
 struct Options {
     u64 Frames = 0;
     std::string ScreenshotPath;

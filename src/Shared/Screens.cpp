@@ -67,6 +67,13 @@ void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 m
                                  height, core);
 }
 
+void DrawCover(Emerald::Renderer2D& r, f32 time)
+{
+    DrawLogo(r, GameInfo::kTitle, kPlayfieldCenter.y - 30.0f, 800.0f, time);
+    VectorFont::DrawTextCentered(r, "A VECTOR ARCADE SHOOTER", kPlayfieldCenter.x,
+                                 kPlayfieldCenter.y + 70.0f, 24.0f, kDim);
+}
+
 void Draw(Emerald::Renderer2D& r, const Game& game, Page page, std::string_view startPrompt,
           const PadLabels& pad, f32 time)
 {

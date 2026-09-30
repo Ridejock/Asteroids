@@ -248,7 +248,7 @@ RockDrift --frames 600                        # quit after 600 frames
 RockDrift --frames 600 --screenshot shot.png  # save the last frame as a PNG
 RockDrift --seed 42                           # repeatable asteroid layout
 RockDrift --screen options                    # start on: title, scores, controls (title pages),
-                                              #   play, pause or options (screenshots)
+                                              #   play, pause, options, or logo (store cover)
 RockDrift --saucer small                      # testing: a game with a saucer (large|small)
 RockDrift --game-over 12345                   # testing: end at once with this score
 ```

@@ -367,6 +367,8 @@ void AsteroidsApp::OnRender2D(Emerald::Renderer2D& r)
     DrawWorld(r);
     if (!m_Game.IsOnTitle())
         DrawHud(r);
+    else if (m_Options.Screen == "logo")
+        TitleScreen::DrawCover(r, m_TitleTime);
     else if (m_Overlays.empty())
         TitleScreen::Draw(
             r, m_Game,
