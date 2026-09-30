@@ -9,7 +9,7 @@
 
 namespace Asteroids::VectorFont {
 
-// A tiny stroke font made of straight lines, in the spirit of the arcade original: every glyph
+// A tiny stroke font made of straight lines, in the spirit of old vector displays: every glyph
 // is drawn on a 4 x 6 grid with Renderer2D lines, no font files or textures involved.
 // Supports A-Z (lower case is drawn as upper case), 0-9, space and - + = _ . , : ! ? / < > ' ( );
 // anything else is blank.

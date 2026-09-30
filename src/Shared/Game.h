@@ -78,7 +78,15 @@ struct Particle {
 // shared and drawn by DrawHud.
 class Game {
 public:
+    // Starts on the title screen (see ShowTitle).
     explicit Game(u32 seed);
+
+    // The title screen's background: a few rocks drifting, no ship, no score. The app draws
+    // the logo and menus on top.
+    void ShowTitle();
+    // A new game: 3 ships, score 0, wave 1.
+    void StartGame();
+    [[nodiscard]] bool IsOnTitle() const { return m_State == State::Attract; }
 
     void Update(const GameInput& input, f32 dt);
     // Score, lives, high score, banners, initials entry and the high score table, in playfield
@@ -109,8 +117,13 @@ public:
     [[nodiscard]] u32 GetLives() const { return m_Lives; }
     [[nodiscard]] u32 GetWave() const { return m_Wave; }
     [[nodiscard]] usize GetAsteroidCount() const { return m_Asteroids.size(); }
-    // True once the last ship is gone: while entering initials and on the game over screen.
+    // True unless a game is being played: while entering initials, on the game over screen and
+    // on the title screen.
     [[nodiscard]] bool IsGameOver() const { return m_State != State::Playing; }
+    // True while the player controls a ship (the app pauses then when the window loses focus).
+    [[nodiscard]] bool IsPlaying() const { return m_State == State::Playing; }
+    // On the game over screen with the table shown (Start restarts from here).
+    [[nodiscard]] bool IsOnGameOverScreen() const { return m_State == State::GameOver; }
     [[nodiscard]] bool IsEnteringInitials() const { return m_State == State::EnterInitials; }
     // True while the ship is alive and its engine fires (for the looping thrust sound).
     [[nodiscard]] bool IsThrusting() const
@@ -143,8 +156,11 @@ public:
     void SpawnSaucer(SaucerSize size);
     void ForceGameOver(u32 score);
 
+    // The top 10 at `top` (playfield y), for the game over and title screens.
+    void DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const;
+
 private:
-    enum class State { Playing, EnterInitials, GameOver };
+    enum class State { Attract, Playing, EnterInitials, GameOver };
 
     void NewGame();
     void StartWave();
@@ -166,7 +182,6 @@ private:
     void SpawnExplosion(const Vec2& position, u32 dots, f32 speed);
 
     void DrawInitialsEntry(Emerald::Renderer2D& r) const;
-    void DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const;
     void PlaySound(SoundEvent event, const Vec2& position);
     void UpdateHeartbeat(f32 dt);
     [[nodiscard]] f32 GetBeatInterval() const;

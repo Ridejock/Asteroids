@@ -1,9 +1,32 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(Asteroids
-    VERSION 0.1.0
-    DESCRIPTION "Classic Asteroids (vector and pixel-art versions) built with the Emerald engine"
+    VERSION 1.0.0
+    DESCRIPTION "A vector arcade shooter (and a pixel-art variant) built with the Emerald engine"
     LANGUAGES C CXX)
+
+# ---------------------------------------------------------------------------
+# The game's public name: set it here (or with -DGAME_TITLE="...") and nothing else. It is used
+# for the window title, the title screen logo, the .exe name and version resource, the per-user
+# folder and the release zip. GAME_FILE_NAME is derived from it ("ROCK DRIFT" -> "RockDrift")
+# unless set explicitly.
+# ---------------------------------------------------------------------------
+set(GAME_TITLE "ROCK DRIFT" CACHE STRING "The game's public name (upper case looks best)")
+set(GAME_FILE_NAME "" CACHE STRING "File/folder name of the game (empty = from GAME_TITLE)")
+set(game_file_name "${GAME_FILE_NAME}")
+if(NOT game_file_name)
+    string(REGEX MATCHALL "[A-Za-z0-9]+" title_words "${GAME_TITLE}")
+    foreach(word IN LISTS title_words)
+        string(SUBSTRING "${word}" 0 1 first)
+        string(SUBSTRING "${word}" 1 -1 rest)
+        string(TOUPPER "${first}" first)
+        string(TOLOWER "${rest}" rest)
+        string(APPEND game_file_name "${first}${rest}")
+    endforeach()
+endif()
+set(GAME_FILE_NAME "${game_file_name}")
+message(STATUS "Game: '${GAME_TITLE}' ${PROJECT_VERSION} (files: ${GAME_FILE_NAME})")
+configure_file(src/Shared/GameInfo.h.in "${CMAKE_BINARY_DIR}/generated/GameInfo.h" @ONLY)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -39,7 +62,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        00a78ecab243ddbd7c0ec87962e335e8ad062327
+    GIT_TAG        91bf21321d2c3aa74e1d9671699b8904d7d3fed2
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
@@ -47,12 +70,21 @@ FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui i
 # ---------------------------------------------------------------------------
 # The game: one library with everything both versions share (rules, collisions, scoring, high
 # scores, sounds, controls, the app loop and HUD), and one small executable per look:
-#   Asteroids       vector lines, like the arcade original (src/Vector)
+#   Asteroids       glowing vector lines (src/Vector); the released game
 #   AsteroidsPixel  pixel-art sprites from assets/pixel (src/Pixel)
 # ---------------------------------------------------------------------------
 add_library(AsteroidsShared STATIC
     src/Shared/AsteroidsApp.cpp
     src/Shared/AsteroidsApp.h
+    src/Shared/GameInfo.h.in
+    src/Shared/Icon.cpp
+    src/Shared/Icon.h
+    src/Shared/Menu.cpp
+    src/Shared/Menu.h
+    src/Shared/Screens.cpp
+    src/Shared/Screens.h
+    src/Shared/Settings.cpp
+    src/Shared/Settings.h
     src/Shared/Game.cpp
     src/Shared/Game.h
     src/Shared/Ship.cpp
@@ -71,7 +103,7 @@ add_library(AsteroidsShared STATIC
     src/Shared/Sounds.cpp
     src/Shared/Sounds.h
 )
-target_include_directories(AsteroidsShared PUBLIC src/Shared)
+target_include_directories(AsteroidsShared PUBLIC src/Shared "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(AsteroidsShared PUBLIC Emerald::Emerald)
 emerald_set_warnings(AsteroidsShared) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
 
@@ -99,6 +131,11 @@ foreach(game Asteroids AsteroidsPixel)
     add_dependencies(${game} AsteroidsAssets)
 endforeach()
 
+# The .exe files are named after the game: e.g. RockDrift.exe and RockDriftPixel.exe (the targets
+# keep their names).
+set_target_properties(Asteroids PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}")
+set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}Pixel")
+
 # Make Asteroids the default target to run/debug in Visual Studio.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Asteroids)
 
@@ -111,10 +148,12 @@ if(ASTEROIDS_BUILD_TESTS)
     enable_testing()
     add_executable(AsteroidsTests tests/SoundOverrideTests.cpp tests/Check.h)
     add_executable(AsteroidsLogicTests tests/GameLogicTests.cpp tests/Check.h)
-    foreach(test_target AsteroidsTests AsteroidsLogicTests)
+    add_executable(AsteroidsMenuTests tests/MenuSettingsTests.cpp tests/Check.h)
+    foreach(test_target AsteroidsTests AsteroidsLogicTests AsteroidsMenuTests)
         target_link_libraries(${test_target} PRIVATE AsteroidsShared)
         emerald_set_warnings(${test_target})
     endforeach()
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)
     add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
+    add_test(NAME MenusAndSettings COMMAND AsteroidsMenuTests)
 endif()

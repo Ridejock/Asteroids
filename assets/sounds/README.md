@@ -21,8 +21,12 @@ Name each file `<name>.mp3` or `<name>.wav` (if both exist, the `.mp3` is used):
 | `saucer_large` | large saucer siren | looped while it is on screen: use a clip that loops seamlessly |
 | `saucer_small` | small saucer siren | looped while it is on screen: use a clip that loops seamlessly |
 | `saucer_fire` | saucer shot | |
-| `music` | *(nothing by default)* | loops on the game over screen, never during play |
+| `music` | *(nothing by default)* | loops on the title and game over screens, never during play |
 | `ambience` | *(nothing by default)* | loops quietly (25%) under the gameplay, stops on game over |
+
+These files are for your own local builds only: the release package (`cmake --build --preset
+release --target package`) never includes anything from `assets/`, so the published game always
+has just its generated sounds.
 
 Missing files simply keep the generated sound. The log says which overrides were loaded, e.g.
 `Sound overrides from ...: fire, music`.

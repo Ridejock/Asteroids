@@ -30,6 +30,9 @@ constexpr f32 kFirstBeatDelay = 0.6f;
 // Enter at that moment doesn't type a letter or start a new game by accident.
 constexpr f32 kInitialsInputDelay = 0.5f;
 constexpr f32 kRestartDelay = 1.0f;
+// The game over screen goes back to the title screen by itself after this long.
+constexpr f32 kBackToTitleDelay = 20.0f;
+constexpr u32 kTitleRocks = 7;
 // Letters for the initials, in the order Up steps through them.
 constexpr std::string_view kInitialsLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
 
@@ -58,6 +61,37 @@ std::string PadLeft(std::string text, usize width)
 } // namespace
 
 Game::Game(u32 seed) : m_Random(seed)
+{
+    ShowTitle();
+}
+
+void Game::ShowTitle()
+{
+    m_State = State::Attract;
+    m_StateTime = 0.0f;
+    m_Lives = 0;
+    m_ShipAlive = false;
+    m_Ship.Thrusting = false;
+    m_FlameLength = 0.0f;
+    m_Bullets.clear();
+    m_Particles.clear();
+    m_Saucer.reset();
+    m_SaucerBullets.clear();
+    m_WaveBannerTimer = 0.0f;
+    m_NewRank = HighScoreTable::kMaxEntries;
+    // A mix of sizes anywhere on the field; the logo is drawn over them.
+    m_Asteroids.clear();
+    for (u32 i = 0; i < kTitleRocks; ++i) {
+        const AsteroidSize size = i < 3   ? AsteroidSize::Large
+                                  : i < 5 ? AsteroidSize::Medium
+                                          : AsteroidSize::Small;
+        const Vec2 position{m_Random.Float(0.0f, kPlayfieldSize.x),
+                            m_Random.Float(0.0f, kPlayfieldSize.y)};
+        m_Asteroids.push_back(MakeAsteroid(m_Random, size, position));
+    }
+}
+
+void Game::StartGame()
 {
     NewGame();
 }
@@ -119,6 +153,8 @@ void Game::Update(const GameInput& input, f32 dt)
         UpdateInitials(input);
     else if (m_State == State::GameOver && m_StateTime >= kRestartDelay && input.StartPressed)
         NewGame();
+    else if (m_State == State::GameOver && m_StateTime >= kBackToTitleDelay)
+        ShowTitle();
 
     if (m_State == State::Playing)
         UpdateShip(input, dt);
@@ -563,6 +599,8 @@ bool Game::IsShipVisible() const
 
 void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
 {
+    if (m_State == State::Attract)
+        return; // the title screen has its own text
     // Score in the top-left corner (at least two digits, like the arcade's "00").
     const std::string score =
         m_Score < 10 ? "0" + std::to_string(m_Score) : std::to_string(m_Score);
