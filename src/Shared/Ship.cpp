@@ -48,17 +48,18 @@ Vec2 Ship::EnginePosition() const
 void Ship::Update(const ShipControls& controls, f32 dt)
 {
     // With +Y down, a growing angle turns clockwise on screen, i.e. to the right.
-    Angle += controls.Rotate * kTurnSpeed * dt;
+    Angle += controls.Rotate * kTurnSpeed * TurnScale * dt;
 
     Thrusting = controls.Thrust;
     if (Thrusting)
-        Velocity += Forward() * (kThrust * dt);
+        Velocity += Forward() * (kThrust * ThrustScale * dt);
 
     // Drag and a speed limit keep the ship controllable.
     Velocity *= std::exp(-kDrag * dt);
     const f32 speed = Emerald::Length(Velocity);
-    if (speed > kMaxSpeed)
-        Velocity *= kMaxSpeed / speed;
+    const f32 maxSpeed = kMaxSpeed * ThrustScale;
+    if (speed > maxSpeed)
+        Velocity *= maxSpeed / speed;
 
     Position = Wrap(Position + Velocity * dt);
 }

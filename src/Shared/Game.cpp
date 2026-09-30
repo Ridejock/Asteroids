@@ -8,6 +8,7 @@
 #include <Emerald/Math/Common.h>
 
 #include "Playfield.h"
+#include "ScoreScreens.h"
 #include "VectorFont.h"
 
 namespace Asteroids {
@@ -33,8 +34,6 @@ constexpr f32 kRestartDelay = 1.0f;
 // The game over screen goes back to the title screen by itself after this long.
 constexpr f32 kBackToTitleDelay = 20.0f;
 constexpr u32 kTitleRocks = 7;
-// Letters for the initials, in the order Up steps through them.
-constexpr std::string_view kInitialsLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
 
 // A large rock is itself plus 2 medium plus 4 small: 7 "rocks of mass" left to destroy.
 u32 MassOf(AsteroidSize size)
@@ -47,15 +46,6 @@ u32 MassOf(AsteroidSize size)
     default:
         return 1;
     }
-}
-
-const Vec4 kTextColor{0.95f, 0.97f, 1.0f, 1.0f};
-const Vec4 kDimTextColor{0.95f, 0.97f, 1.0f, 0.35f};
-
-// Right-aligns `text` in `width` characters (the font is monospaced, so columns line up).
-std::string PadLeft(std::string text, usize width)
-{
-    return text.size() < width ? std::string(width - text.size(), ' ') + text : text;
 }
 
 } // namespace
@@ -486,8 +476,7 @@ void Game::EndGame()
     if (m_HighScores.Qualifies(m_Score)) {
         // Like the arcade: the first letter starts at A, the others are still blank.
         m_State = State::EnterInitials;
-        m_Initials = "A  ";
-        m_InitialsCursor = 0;
+        m_InitialsEntry.Begin();
     } else {
         m_State = State::GameOver;
     }
@@ -506,32 +495,14 @@ void Game::ForceGameOver(u32 score)
 
 void Game::UpdateInitials(const GameInput& input)
 {
-    // Up/Down step through A..Z and space (wrapping around).
-    char& letter = m_Initials[m_InitialsCursor];
-    if (input.MenuUpPressed != input.MenuDownPressed) {
-        const usize count = kInitialsLetters.size();
-        usize index = kInitialsLetters.find(letter);
-        if (index == std::string_view::npos)
-            index = 0;
-        index = input.MenuUpPressed ? (index + 1) % count : (index + count - 1) % count;
-        letter = kInitialsLetters[index];
-    }
-
-    if (input.ConfirmPressed) {
-        // Next letter (starting at A), or done after the third.
-        if (++m_InitialsCursor < HighScoreTable::kInitialsLength) {
-            m_Initials[m_InitialsCursor] = 'A';
-        } else {
-            m_NewRank = m_HighScores.Insert(m_Initials, m_Score);
-            m_HighScoresChanged = true;
-            m_State = State::GameOver;
-            m_StateTime = 0.0f;
-            EM_INFO("New high score #{}: '{}' {}", m_NewRank + 1, m_Initials, m_Score);
-        }
-    } else if (input.BackPressed && m_InitialsCursor > 0) {
-        m_Initials[m_InitialsCursor] = ' '; // blank again, like before we got here
-        --m_InitialsCursor;
-    }
+    if (!m_InitialsEntry.Update(input))
+        return;
+    const std::string& initials = m_InitialsEntry.GetInitials();
+    m_NewRank = m_HighScores.Insert(initials, m_Score);
+    m_HighScoresChanged = true;
+    m_State = State::GameOver;
+    m_StateTime = 0.0f;
+    EM_INFO("New high score #{}: '{}' {}", m_NewRank + 1, initials, m_Score);
 }
 
 void Game::SpawnDebris(const Vec2& position, const Vec2& velocity, u32 lines)
@@ -621,7 +592,7 @@ void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
                                      18.0f, kTextColor);
 
     if (m_State == State::EnterInitials) {
-        DrawInitialsEntry(r);
+        m_InitialsEntry.Draw(r, m_Prompts, m_Time);
     } else if (m_State == State::GameOver) {
         const bool hasTable = !m_HighScores.GetEntries().empty();
         VectorFont::DrawTextCentered(r, "GAME OVER", centerX, hasTable ? 110.0f : 280.0f,
@@ -638,52 +609,9 @@ void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
     }
 }
 
-void Game::DrawInitialsEntry(Emerald::Renderer2D& r) const
-{
-    const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "YOUR SCORE IS ONE OF THE TEN BEST", centerX, 140.0f, 24.0f,
-                                 kTextColor);
-    VectorFont::DrawTextCentered(r, "PLEASE ENTER YOUR INITIALS", centerX, 185.0f, 24.0f,
-                                 kTextColor);
-
-    // Three big letters over underlines; the one being changed blinks its underline.
-    constexpr f32 kLetterHeight = 60.0f;
-    constexpr f32 kSlotSpacing = 80.0f;
-    const f32 letterWidth = VectorFont::TextWidth("A", kLetterHeight);
-    for (usize i = 0; i < HighScoreTable::kInitialsLength; ++i) {
-        const f32 x = centerX + (static_cast<f32>(i) - 1.0f) * kSlotSpacing - 0.5f * letterWidth;
-        if (i <= m_InitialsCursor)
-            VectorFont::DrawText(r, std::string(1, m_Initials[i]), {x, 290.0f}, kLetterHeight,
-                                 kTextColor);
-        const bool current = i == m_InitialsCursor;
-        if (!current || std::fmod(m_Time * 3.0f, 2.0f) < 1.4f)
-            r.DrawLine({x, 368.0f}, {x + letterWidth, 368.0f},
-                       current ? kTextColor : kDimTextColor);
-    }
-
-    VectorFont::DrawTextCentered(r, "UP / DOWN: CHANGE LETTER", centerX, 450.0f, 20.0f, kTextColor);
-    VectorFont::DrawTextCentered(r, m_Prompts.Confirm + ": NEXT", centerX, 490.0f, 20.0f,
-                                 kTextColor);
-    VectorFont::DrawTextCentered(r, m_Prompts.Back + ": BACK", centerX, 530.0f, 20.0f, kTextColor);
-}
-
 void Game::DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const
 {
-    const f32 centerX = kPlayfieldCenter.x;
-    VectorFont::DrawTextCentered(r, "HIGH SCORES", centerX, top, 24.0f, kTextColor);
-
-    // " 1.  ABC   12340": every row has the same length, so the columns line up when centered.
-    const std::vector<HighScore>& entries = m_HighScores.GetEntries();
-    for (usize i = 0; i < entries.size(); ++i) {
-        const std::string row = PadLeft(std::to_string(i + 1) + ".", 3) + "  " +
-                                entries[i].Initials + "  " +
-                                PadLeft(std::to_string(entries[i].Score), 6);
-        // The entry just made blinks.
-        if (i == m_NewRank && std::fmod(m_Time * 3.0f, 2.0f) >= 1.4f)
-            continue;
-        VectorFont::DrawTextCentered(r, row, centerX, top + 50.0f + 32.0f * static_cast<f32>(i),
-                                     20.0f, kTextColor);
-    }
+    Asteroids::DrawHighScoreTable(r, m_HighScores, top, m_NewRank, m_Time);
 }
 
 } // namespace Asteroids

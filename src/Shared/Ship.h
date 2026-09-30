@@ -25,6 +25,9 @@ struct Ship {
     Vec2 Velocity;
     f32 Angle = -Emerald::HalfPi; // radians; 0 = facing right, -HalfPi = facing up (+Y is down)
     bool Thrusting = false;
+    // Tuning for the roguelike's ships and upgrades (1 = the classic ship).
+    f32 ThrustScale = 1.0f; // acceleration and top speed
+    f32 TurnScale = 1.0f;
 
     // Puts the ship at `position`, at rest, facing up.
     void Reset(const Vec2& position);

@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <Emerald/Core/Defines.h>
@@ -19,6 +20,7 @@ namespace Asteroids {
 struct GameInput {
     ShipControls Ship;
     bool FirePressed = false;
+    bool FireHeld = false; // auto-fire (the roguelike; the classic game fires per press)
     bool HyperspacePressed = false;
     bool StartPressed = false;
     // Menu input for entering initials and a mode's own screens (Main repeats the directions
@@ -57,6 +59,7 @@ enum class SoundEvent : u8 {
     ShieldHit,     // the shield absorbed a hit
     Upgrade,       // an upgrade was picked
     Purchase,      // something bought in the hangar
+    Pickup,        // scrap collected
     MetalHit,      // a shot bounced off armor (metal rock, boss)
     Blast,         // an explosive rock or the hyperspace blast went off
     MissileLaunch, // a homing missile left the ship
@@ -126,6 +129,8 @@ public:
     // Testing helpers (command line / debug panel).
     virtual void SpawnSaucer(SaucerSize size) = 0;
     virtual void ForceGameOver(u32 score) = 0;
+    // A --screen name the mode handles itself (e.g. "hangar"); false if it doesn't know it.
+    virtual bool OpenDebugScreen(std::string_view /*name*/) { return false; }
 };
 
 } // namespace Asteroids

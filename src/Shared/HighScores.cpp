@@ -17,7 +17,7 @@ bool HighScoreTable::Qualifies(u32 score) const
     return m_Entries.size() < kMaxEntries || score > m_Entries.back().Score;
 }
 
-usize HighScoreTable::Insert(std::string_view initials, u32 score)
+usize HighScoreTable::Insert(std::string_view initials, u32 score, std::string_view note)
 {
     if (!Qualifies(score))
         return kMaxEntries;
@@ -25,7 +25,12 @@ usize HighScoreTable::Insert(std::string_view initials, u32 score)
     const auto it = std::find_if(m_Entries.begin(), m_Entries.end(),
                                  [score](const HighScore& e) { return e.Score < score; });
     const usize rank = static_cast<usize>(it - m_Entries.begin());
-    m_Entries.insert(it, HighScore{CleanInitials(initials), score});
+    // The note keeps only letters, digits and spaces (it has to survive the one-line format).
+    std::string cleanNote;
+    for (const char c : note)
+        if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ')
+            cleanNote += c;
+    m_Entries.insert(it, HighScore{CleanInitials(initials), score, cleanNote});
     if (m_Entries.size() > kMaxEntries)
         m_Entries.resize(kMaxEntries);
     return rank;
@@ -35,7 +40,8 @@ std::string HighScoreTable::Serialize() const
 {
     std::string text;
     for (const HighScore& e : m_Entries)
-        text += e.Initials + " " + std::to_string(e.Score) + "\n";
+        text += e.Initials + " " + std::to_string(e.Score) + (e.Note.empty() ? "" : " " + e.Note) +
+                "\n";
     return text;
 }
 
@@ -50,16 +56,18 @@ HighScoreTable HighScoreTable::Parse(std::string_view text)
         if (!line.empty() && line.back() == '\r')
             line.remove_suffix(1);
 
-        // "ABC 12340": 3 initials, a space, then only digits.
+        // "ABC 12340": 3 initials, a space, then only digits (and maybe " " and a note).
         if (line.size() < kInitialsLength + 2 || line[kInitialsLength] != ' ')
             continue;
         const std::string_view digits = line.substr(kInitialsLength + 1);
         u32 score = 0;
         const auto [ptr, error] =
             std::from_chars(digits.data(), digits.data() + digits.size(), score);
-        if (error != std::errc() || ptr != digits.data() + digits.size())
-            continue; // not a number, too big, or junk after it
-        table.Insert(line.substr(0, kInitialsLength), score); // sorts and keeps the best 10
+        const std::string_view rest = digits.substr(static_cast<usize>(ptr - digits.data()));
+        if (error != std::errc() || (!rest.empty() && rest.front() != ' '))
+            continue; // not a number, too big, or junk right after it
+        // Sorts and keeps the best 10.
+        table.Insert(line.substr(0, kInitialsLength), score, rest.empty() ? rest : rest.substr(1));
     }
     return table;
 }

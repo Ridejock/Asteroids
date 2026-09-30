@@ -12,6 +12,7 @@ namespace Asteroids {
 struct HighScore {
     std::string Initials; // always 3 characters: A-Z or space
     u32 Score = 0;
+    std::string Note; // optional, e.g. "S2 W3" (how far a roguelike run got); A-Z, 0-9, spaces
 };
 
 // The arcade's top 10: best score first. Pure logic plus a tiny text format, so it is easy to
@@ -19,6 +20,7 @@ struct HighScore {
 //
 //   ABC 12340
 //   E A 9870      <- spaces are allowed in initials, so they are always exactly 3 characters
+//   XYZ 5000 S2 W3 <- an optional note after the score (only written when there is one)
 //
 // Anything that doesn't look like that is skipped, so a damaged file loses only the bad lines.
 class HighScoreTable {
@@ -31,7 +33,7 @@ public:
     // Adds the entry in score order and drops whatever falls off the end. A new score goes below
     // equal old ones (first come, first served). Returns its rank (0 = best), or kMaxEntries if
     // it didn't make it.
-    usize Insert(std::string_view initials, u32 score);
+    usize Insert(std::string_view initials, u32 score, std::string_view note = {});
 
     [[nodiscard]] const std::vector<HighScore>& GetEntries() const { return m_Entries; }
     [[nodiscard]] u32 GetBest() const { return m_Entries.empty() ? 0 : m_Entries.front().Score; }

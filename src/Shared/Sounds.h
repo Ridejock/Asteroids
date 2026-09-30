@@ -27,6 +27,7 @@ struct Sounds {
     Emerald::Sound ShieldHit;     // a bright "zap" as the shield takes the hit
     Emerald::Sound Upgrade;       // rising arpeggio: an upgrade picked
     Emerald::Sound Purchase;      // two coin-like blips
+    Emerald::Sound Pickup;        // a tiny rising blip (scrap collected)
     Emerald::Sound MetalHit;      // short metallic clank
     Emerald::Sound Blast;         // deep punchy explosion (explosive rocks, hyperspace blast)
     Emerald::Sound MissileLaunch; // soft hiss

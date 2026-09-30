@@ -224,6 +224,8 @@ void AsteroidsApp::OnStart()
 void AsteroidsApp::ApplyStartScreen()
 {
     const std::string& screen = m_Options.Screen;
+    if (!screen.empty() && m_Game->OpenDebugScreen(screen))
+        return;
     const bool haveScores = !m_Game->GetHighScores().GetEntries().empty();
     if (screen == "scores")
         m_TitleTime = TitleTimeFor(TitleScreen::Page::HighScores, haveScores);
@@ -334,6 +336,7 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
     input.Ship.Rotate = in.GetAxis("Rotate");
     input.Ship.Thrust = in.IsActionDown("Thrust");
     input.FirePressed = in.WasActionPressed("Fire");
+    input.FireHeld = in.IsActionDown("Fire");
     input.HyperspacePressed = in.WasActionPressed("Hyperspace");
     input.StartPressed = in.WasActionPressed("Start") && !alt;
     input.MenuUpPressed = menu.Up;
@@ -572,6 +575,9 @@ void AsteroidsApp::PlayGameSounds()
             break;
         case SoundEvent::Purchase:
             s = &m_Sounds.Purchase;
+            break;
+        case SoundEvent::Pickup:
+            s = &m_Sounds.Pickup;
             break;
         case SoundEvent::MetalHit:
             s = &m_Sounds.MetalHit;

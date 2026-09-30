@@ -16,6 +16,7 @@
 #include "HighScores.h"
 #include "Random.h"
 #include "Saucer.h"
+#include "ScoreScreens.h"
 #include "Ship.h"
 
 namespace Asteroids {
@@ -141,7 +142,6 @@ private:
     [[nodiscard]] f32 NextSaucerDelay();
     void SpawnExplosion(const Vec2& position, u32 dots, f32 speed);
 
-    void DrawInitialsEntry(Emerald::Renderer2D& r) const;
     void PlaySound(SoundEvent event, const Vec2& position, const Vec2& velocity = {});
     void UpdateHeartbeat(f32 dt);
     [[nodiscard]] f32 GetBeatInterval() const;
@@ -167,8 +167,7 @@ private:
 
     HighScoreTable m_HighScores;
     bool m_HighScoresChanged = false;
-    std::string m_Initials;                        // being entered, always 3 characters
-    usize m_InitialsCursor = 0;                    // which of them is being changed
+    InitialsEntry m_InitialsEntry;
     usize m_NewRank = HighScoreTable::kMaxEntries; // row to highlight in the table (none)
     f32 m_StateTime = 0.0f;                        // seconds since initials entry / game over began
 

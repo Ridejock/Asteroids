@@ -69,6 +69,50 @@ const ParticleEmitterConfig kExhaust{.StartColor = {1.0f, 0.8f, 0.4f, 0.9f},
                                      .EndSize = 1.5f,
                                      .Rate = 110.0f};
 
+// Roguelike effects (the classic game never sends these events).
+// Blast: a big hot ring plus a fireball, for explosive rocks and the hyperspace blast.
+const ParticleEmitterConfig kBlastRing{.StartColor = {1.0f, 0.85f, 0.5f, 1.0f},
+                                       .EndColor = {1.0f, 0.3f, 0.1f, 0.0f},
+                                       .Speed = {300.0f, 330.0f},
+                                       .Lifetime = {0.35f, 0.42f},
+                                       .Drag = 1.2f,
+                                       .StartSize = 8.0f,
+                                       .EndSize = 3.0f};
+// Shield: a cyan ring close around the ship.
+const ParticleEmitterConfig kShieldRing{.StartColor = {0.6f, 1.0f, 1.0f, 1.0f},
+                                        .EndColor = {0.2f, 0.6f, 1.0f, 0.0f},
+                                        .Speed = {90.0f, 100.0f},
+                                        .Lifetime = {0.3f, 0.35f},
+                                        .Drag = 2.0f,
+                                        .StartSize = 6.0f,
+                                        .EndSize = 2.0f};
+// Upgrade: slow golden sparkles rising around the ship.
+const ParticleEmitterConfig kSparkle{.StartColor = {1.0f, 0.95f, 0.6f, 1.0f},
+                                     .EndColor = {0.5f, 1.0f, 0.7f, 0.0f},
+                                     .Shape = EmitterShape::Circle,
+                                     .Radius = 26.0f,
+                                     .Speed = {10.0f, 60.0f},
+                                     .Lifetime = {0.6f, 1.2f},
+                                     .Drag = 0.5f,
+                                     .StartSize = 4.0f,
+                                     .EndSize = 1.0f};
+// Metal hit: a few short white-blue sparks.
+const ParticleEmitterConfig kClank{.StartColor = {0.9f, 0.95f, 1.0f, 1.0f},
+                                   .EndColor = {0.4f, 0.6f, 1.0f, 0.0f},
+                                   .Speed = {80.0f, 220.0f},
+                                   .Lifetime = {0.12f, 0.25f},
+                                   .Drag = 4.0f,
+                                   .StartSize = 6.0f,
+                                   .EndSize = 1.5f};
+// Scrap picked up: tiny gold glints.
+const ParticleEmitterConfig kGlint{.StartColor = {1.0f, 0.85f, 0.4f, 1.0f},
+                                   .EndColor = {1.0f, 0.6f, 0.2f, 0.0f},
+                                   .Speed = {30.0f, 90.0f},
+                                   .Lifetime = {0.15f, 0.3f},
+                                   .Drag = 3.0f,
+                                   .StartSize = 3.0f,
+                                   .EndSize = 1.0f};
+
 } // namespace
 
 void ParticleEffects::SetEnabled(bool enabled)
@@ -127,6 +171,34 @@ void ParticleEffects::OnSound(const GameSound& sound)
     case SoundEvent::SaucerExplosion:
         m_Particles.Emit(kSaucerDebris, sound.Position, 40, 0.0f, sound.Velocity * 0.5f);
         m_Particles.Emit(kSparks, sound.Position, 16, 0.0f, sound.Velocity * 0.5f);
+        break;
+    case SoundEvent::Blast:
+        m_Particles.Emit(kBlastRing, sound.Position, 64, 0.0f, {});
+        m_Particles.Emit(kFireball, sound.Position, 50, 0.0f, {});
+        break;
+    case SoundEvent::BossExplosion: {
+        ParticleEmitterConfig big = kFireball;
+        big.Radius = 50.0f;
+        big.Lifetime = {0.6f, 1.8f};
+        m_Particles.Emit(big, sound.Position, 260, 0.0f, {});
+        m_Particles.Emit(kBlastRing, sound.Position, 120, 0.0f, {});
+        m_Particles.Emit(kSaucerDebris, sound.Position, 80, 0.0f, {});
+        break;
+    }
+    case SoundEvent::ShieldHit:
+        m_Particles.Emit(kShieldRing, sound.Position, 40, 0.0f, sound.Velocity);
+        break;
+    case SoundEvent::Upgrade:
+        m_Particles.Emit(kSparkle, sound.Position, 50, 0.0f, {});
+        break;
+    case SoundEvent::MetalHit:
+        m_Particles.Emit(kClank, sound.Position, 6, 0.0f, sound.Velocity);
+        break;
+    case SoundEvent::Pickup:
+        m_Particles.Emit(kGlint, sound.Position, 5, 0.0f, {});
+        break;
+    case SoundEvent::MissileLaunch:
+        m_Particles.Emit(kSparks, sound.Position, 6, 0.0f, {});
         break;
     default:
         break;

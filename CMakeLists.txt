@@ -99,6 +99,8 @@ add_library(AsteroidsShared STATIC
     src/Shared/Menu.h
     src/Shared/ParticleEffects.cpp
     src/Shared/ParticleEffects.h
+    src/Shared/ScoreScreens.cpp
+    src/Shared/ScoreScreens.h
     src/Shared/Screens.cpp
     src/Shared/Screens.h
     src/Shared/Settings.cpp
@@ -125,8 +127,24 @@ target_include_directories(AsteroidsShared PUBLIC src/Shared "${CMAKE_BINARY_DIR
 target_link_libraries(AsteroidsShared PUBLIC Emerald::Emerald)
 emerald_set_warnings(AsteroidsShared) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
 
+# The pixel version's roguelike: runs, upgrades, bosses and the hangar (meta progress).
+add_library(AsteroidsRogue STATIC
+    src/Rogue/Meta.cpp
+    src/Rogue/Meta.h
+    src/Rogue/RogueGame.cpp
+    src/Rogue/RogueGame.h
+    src/Rogue/Run.cpp
+    src/Rogue/Run.h
+    src/Rogue/Upgrades.cpp
+    src/Rogue/Upgrades.h
+)
+target_include_directories(AsteroidsRogue PUBLIC src/Rogue)
+target_link_libraries(AsteroidsRogue PUBLIC AsteroidsShared)
+emerald_set_warnings(AsteroidsRogue)
+
 add_executable(Asteroids src/Vector/Main.cpp)
 add_executable(AsteroidsPixel src/Pixel/Main.cpp)
+target_link_libraries(AsteroidsPixel PRIVATE AsteroidsRogue)
 
 # assets/ (the pixel sprites, and the optional player-supplied sounds in assets/sounds, which are
 # not in git) is copied next to the executables. A custom target instead of a POST_BUILD step, so
@@ -210,6 +228,10 @@ if(ASTEROIDS_BUILD_TESTS)
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)
     add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
     add_test(NAME MenusAndSettings COMMAND AsteroidsMenuTests)
+    add_executable(AsteroidsRogueTests tests/RogueTests.cpp tests/Check.h)
+    target_link_libraries(AsteroidsRogueTests PRIVATE AsteroidsRogue)
+    emerald_set_warnings(AsteroidsRogueTests)
+    add_test(NAME Roguelike COMMAND AsteroidsRogueTests)
 endif()
 
 # ---------------------------------------------------------------------------

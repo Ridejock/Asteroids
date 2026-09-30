@@ -1,50 +1,212 @@
 {
  "ship": {
-  "x": 1,
+  "x": 199,
   "y": 1,
   "w": 38,
   "h": 80
  },
  "enemy": {
-  "x": 40,
-  "y": 1,
+  "x": 1,
+  "y": 262,
   "w": 80,
   "h": 46
  },
  "asteroid_large_1": {
-  "x": 1,
-  "y": 82,
+  "x": 82,
+  "y": 262,
   "w": 40,
   "h": 36
  },
  "asteroid_large_2": {
-  "x": 42,
-  "y": 82,
+  "x": 123,
+  "y": 262,
   "w": 38,
   "h": 36
  },
  "asteroid_medium_1": {
-  "x": 81,
-  "y": 82,
+  "x": 42,
+  "y": 309,
   "w": 30,
   "h": 28
  },
  "asteroid_medium_2": {
-  "x": 1,
-  "y": 119,
+  "x": 166,
+  "y": 309,
   "w": 30,
   "h": 26
  },
  "asteroid_small_1": {
-  "x": 32,
-  "y": 119,
+  "x": 197,
+  "y": 309,
   "w": 24,
   "h": 20
  },
  "asteroid_small_2": {
-  "x": 57,
-  "y": 119,
+  "x": 222,
+  "y": 309,
   "w": 22,
   "h": 20
+ },
+ "boss_monolith": {
+  "x": 112,
+  "y": 1,
+  "w": 86,
+  "h": 94
+ },
+ "boss_mothership": {
+  "x": 1,
+  "y": 193,
+  "w": 194,
+  "h": 68
+ },
+ "boss_station": {
+  "x": 1,
+  "y": 1,
+  "w": 110,
+  "h": 110
+ },
+ "missile": {
+  "x": 246,
+  "y": 346,
+  "w": 5,
+  "h": 9
+ },
+ "rock_explosive_large": {
+  "x": 162,
+  "y": 262,
+  "w": 40,
+  "h": 36
+ },
+ "rock_explosive_medium": {
+  "x": 73,
+  "y": 309,
+  "w": 30,
+  "h": 28
+ },
+ "rock_explosive_small": {
+  "x": 1,
+  "y": 346,
+  "w": 24,
+  "h": 20
+ },
+ "rock_metal_large": {
+  "x": 203,
+  "y": 262,
+  "w": 40,
+  "h": 36
+ },
+ "rock_metal_medium": {
+  "x": 104,
+  "y": 309,
+  "w": 30,
+  "h": 28
+ },
+ "rock_metal_small": {
+  "x": 26,
+  "y": 346,
+  "w": 24,
+  "h": 20
+ },
+ "rock_splitter_large": {
+  "x": 1,
+  "y": 309,
+  "w": 40,
+  "h": 36
+ },
+ "rock_splitter_medium": {
+  "x": 135,
+  "y": 309,
+  "w": 30,
+  "h": 28
+ },
+ "rock_splitter_small": {
+  "x": 51,
+  "y": 346,
+  "w": 24,
+  "h": 20
+ },
+ "scrap": {
+  "x": 1,
+  "y": 367,
+  "w": 7,
+  "h": 7
+ },
+ "ship_bulwark": {
+  "x": 1,
+  "y": 112,
+  "w": 50,
+  "h": 80
+ },
+ "ship_lancer": {
+  "x": 52,
+  "y": 112,
+  "w": 30,
+  "h": 80
+ },
+ "ship_wasp": {
+  "x": 83,
+  "y": 112,
+  "w": 34,
+  "h": 80
+ },
+ "upgrade_homing": {
+  "x": 76,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_hyperblast": {
+  "x": 93,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_longrange": {
+  "x": 110,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_magnet": {
+  "x": 127,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_pierce": {
+  "x": 144,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_rapid": {
+  "x": 161,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_reargun": {
+  "x": 178,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_shield": {
+  "x": 195,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_spread": {
+  "x": 212,
+  "y": 346,
+  "w": 16,
+  "h": 16
+ },
+ "upgrade_thruster": {
+  "x": 229,
+  "y": 346,
+  "w": 16,
+  "h": 16
  }
 }

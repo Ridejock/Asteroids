@@ -215,6 +215,15 @@ Sounds MakeSounds()
     }
     sounds.Purchase = ToSound(coin);
 
+    // Pickup: one very short rising blip.
+    std::vector<f32> pickup = Generate({.Shape = Wave::Triangle,
+                                        .Seconds = 0.06f,
+                                        .StartHz = 1500.0f,
+                                        .EndHz = 2300.0f,
+                                        .Volume = 0.14f});
+    ApplyDecay(pickup, 0.03f);
+    sounds.Pickup = ToSound(pickup);
+
     // Metal: two detuned high squares, decaying fast, like a clank.
     std::vector<f32> clank = Generate({.Shape = Wave::Square,
                                        .Seconds = 0.18f,
