@@ -1,5 +1,5 @@
-// The vector version (the one that is released): everything drawn with 1 px lines, like the
-// vector arcade monitors of the late 1970s.
+// The vector version (the one that is released): everything drawn with lines, with a soft glow
+// like an old vector monitor.
 // All the gameplay, sound and controls live in the shared AsteroidsApp; this file only draws the
 // world.
 
@@ -19,6 +19,30 @@ const Vec4 kAsteroidColor{0.78f, 0.83f, 0.9f, 1.0f};
 const Vec4 kBulletColor{1.0f, 1.0f, 1.0f, 1.0f};
 const Vec4 kSaucerColor{0.95f, 0.97f, 1.0f, 1.0f};
 
+// Glow: each outline is first drawn in two rings of faint, bluish copies around its position (a
+// close brighter one and a wider fainter one), then once sharp on top. Cheap (just more lines)
+// and it reads like the bloom of a vector monitor.
+constexpr i32 kGlowCopies = 8; // per ring
+struct GlowRing {
+    f32 Radius; // playfield units
+    f32 Alpha;  // times the object's own alpha
+};
+constexpr GlowRing kGlowRings[] = {{1.3f, 0.22f}, {3.2f, 0.07f}};
+const Vec4 kGlowTint{0.55f, 0.8f, 1.0f, 1.0f};
+
+// Calls draw(offset, color) for the glow copies and then for the sharp line itself.
+template <typename DrawFn> void DrawGlowing(const Vec4& color, DrawFn&& draw)
+{
+    for (const GlowRing& ring : kGlowRings) {
+        const Vec4 glow{kGlowTint.x, kGlowTint.y, kGlowTint.z, color.w * ring.Alpha};
+        for (i32 i = 0; i < kGlowCopies; ++i) {
+            const f32 angle = Emerald::TwoPi * static_cast<f32>(i) / static_cast<f32>(kGlowCopies);
+            draw(Vec2(std::cos(angle), std::sin(angle)) * ring.Radius, glow);
+        }
+    }
+    draw(Vec2(0.0f, 0.0f), color);
+}
+
 class VectorAsteroids final : public AsteroidsApp {
 public:
     using AsteroidsApp::AsteroidsApp;
@@ -33,16 +57,27 @@ protected:
         if (game.IsGameOver())
             asteroidColor.w = 0.35f;
         for (const Asteroid& asteroid : game.GetAsteroids()) {
-            ForEachWrappedCopy(asteroid.Position, asteroid.Radius * 1.2f,
-                               [&](const Vec2& p) { asteroid.Draw(r, p, asteroidColor); });
+            ForEachWrappedCopy(asteroid.Position, asteroid.Radius * 1.2f, [&](const Vec2& p) {
+                DrawGlowing(asteroidColor, [&](const Vec2& offset, const Vec4& color) {
+                    asteroid.Draw(r, p + offset, color);
+                });
+            });
         }
 
-        for (const Bullet& bullet : game.GetBullets())
-            r.DrawCircle(bullet.Position, 1.5f, kBulletColor, 4);
-        for (const Bullet& bullet : game.GetSaucerBullets())
-            r.DrawCircle(bullet.Position, 1.5f, kBulletColor, 4);
-        if (game.GetSaucer())
-            game.GetSaucer()->Draw(r, kSaucerColor);
+        for (const auto& bullets : {game.GetBullets(), game.GetSaucerBullets()}) {
+            for (const Bullet& bullet : bullets) {
+                DrawGlowing(kBulletColor, [&](const Vec2& offset, const Vec4& color) {
+                    r.DrawCircle(bullet.Position + offset, 1.5f, color, 4);
+                });
+            }
+        }
+        if (game.GetSaucer()) {
+            DrawGlowing(kSaucerColor, [&](const Vec2& offset, const Vec4& color) {
+                Saucer moved = *game.GetSaucer(); // Saucer::Draw draws at its own position
+                moved.Position += offset;
+                moved.Draw(r, color);
+            });
+        }
 
         for (const Particle& p : game.GetParticles()) {
             const f32 fade = p.TimeLeft / p.Lifetime; // 1 -> 0
@@ -58,7 +93,9 @@ protected:
         if (game.IsShipVisible()) {
             const Ship& ship = game.GetShip();
             ForEachWrappedCopy(ship.Position, 20.0f, [&](const Vec2& p) {
-                ship.Draw(r, p, kShipColor, game.GetFlameLength());
+                DrawGlowing(kShipColor, [&](const Vec2& offset, const Vec4& color) {
+                    ship.Draw(r, p + offset, color, game.GetFlameLength());
+                });
             });
         }
     }
