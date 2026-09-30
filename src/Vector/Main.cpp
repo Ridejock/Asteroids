@@ -59,6 +59,8 @@ public:
     [[nodiscard]] const Game& GetGame() const { return static_cast<const Game&>(GetMode()); }
 
 protected:
+    [[nodiscard]] bool HasCrtOption() const override { return true; }
+
     // Text: a TTF font, smooth (Linear) and additive with a faint halo so it glows like the
     // lines, spaced on the line font's grid (layouts and the arcade look stay as they were).
     // Baked at several sizes: without mipmaps a bake should not be shrunk much, and the big one

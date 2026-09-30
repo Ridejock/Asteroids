@@ -55,6 +55,7 @@ cover A–Z, 0–9 and the usual ASCII symbols.
 | Start a game (title screen), new game after *Game Over* | **Enter** or **Space** | **Start** (Menu / Options / +) or **South** |
 | Pause menu / title menu | **Esc** or **P** | **Start** (Menu / Options / +) |
 | Fullscreen on / off | **F11** or **Alt+Enter** | – |
+| CRT effect on / off (ROCK BLASTER only) | **F9** | – |
 | Initials: change letter (A–Z, space) | **W / S** or **↑ / ↓** (hold to repeat) | **d-pad ↑ / ↓** or **left stick up / down** |
 | Initials: next letter / done | **Enter** or **Space** | **South** (A / Cross / B) |
 | Initials: previous letter | **Backspace** | **East** (B / Circle / A) |
@@ -84,7 +85,8 @@ During a game, **Esc / P / pad Start pauses** with a menu: *Resume*, *Options*, 
 
 **Options:** master volume and effects volume (0–100 in steps of 10), fullscreen (borderless, on
 the current display), vsync, screen shake (a short jolt on explosions), particles (sparks, dust and engine exhaust; see
-[Particles](#particles)), and the controls reference. Every change applies at once and is saved to
+[Particles](#particles)), in ROCK BLASTER the CRT effect (see [CRT effect](#crt-effect-rock-blaster)),
+and the controls reference. Every change applies at once and is saved to
 `settings.txt` in the per-user folder (see [High scores](#high-scores) for where that is), one
 `key = value` per line:
 
@@ -95,10 +97,21 @@ fullscreen = off
 vsync = on
 screen_shake = on
 particles = on
+crt_effect = off
 ```
 
 Unknown keys and bad values are ignored, so a hand-edited file cannot break the game. (Runs with
 `--frames` never write it and always start windowed.)
+
+## CRT effect (ROCK BLASTER)
+
+*Options > CRT EFFECT* (or **F9**) runs the frame through Emerald's CRT monitor post-process
+(`Emerald::CrtEffect`): curved glass with rounded corners, phosphor glow (bloom), a short
+phosphor afterglow that leaves fading trails behind moving lines, a slight red/blue fringe towards
+the edges and a vignette. There are no scanlines or aperture mask, like a real vector monitor
+(Emerald has both, off by default). It is **off by default** for now and saved as `crt_effect` in
+`settings.txt`; ROCK BLASTER ROGUE does not offer it. The debug-full build's ImGui panel has
+sliders for every parameter (`Emerald::CrtParams`), to try other looks live.
 
 ## Particles
 
@@ -321,6 +334,7 @@ RockBlaster --screen options                    # start on: title, scores, contr
                                               #   play, pause, options, or logo (store cover)
 RockBlaster --saucer small                      # testing: a game with a saucer (large|small)
 RockBlaster --game-over 12345                   # testing: end at once with this score
+RockBlaster --crt on                            # CRT effect on/off for this run (not saved)
 ```
 
 The roguelike also knows `--screen hangar`, `upgrades` (the picker), `boss1`..`boss3`,

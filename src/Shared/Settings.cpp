@@ -53,7 +53,8 @@ std::string Settings::Serialize() const
         << "fullscreen = " << OnOff(Fullscreen) << '\n'
         << "vsync = " << OnOff(VSync) << '\n'
         << "screen_shake = " << OnOff(ScreenShake) << '\n'
-        << "particles = " << OnOff(Particles) << '\n';
+        << "particles = " << OnOff(Particles) << '\n'
+        << "crt_effect = " << OnOff(Crt) << '\n';
     return out.str();
 }
 
@@ -82,6 +83,8 @@ Settings Settings::Parse(std::string_view text)
             ParseBool(value, settings.ScreenShake);
         else if (key == "particles")
             ParseBool(value, settings.Particles);
+        else if (key == "crt_effect")
+            ParseBool(value, settings.Crt);
     }
     return settings;
 }

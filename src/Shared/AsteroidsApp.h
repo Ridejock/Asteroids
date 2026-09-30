@@ -26,6 +26,7 @@ namespace Asteroids {
 //   --game-over SCORE      start a game and end it at once with that score (initials entry)
 //   --screen NAME          start on: title, scores, controls (title screen pages), play,
 //                          pause, options, or logo (just the logo and a tagline: store cover)
+//   --crt on|off           CRT effect for this run (games that offer it), whatever was saved
 struct Options {
     u64 Frames = 0;
     std::string ScreenshotPath;
@@ -33,6 +34,7 @@ struct Options {
     std::string Saucer;
     std::optional<u32> GameOverScore;
     std::string Screen;
+    std::optional<bool> Crt;
 };
 
 [[nodiscard]] Options ParseOptions(i32 argc, char** argv);
@@ -90,6 +92,8 @@ protected:
     [[nodiscard]] std::filesystem::path GetUserFile(std::string_view name) const;
     // Called after every fixed step in which the game was updated (e.g. to save progress).
     virtual void OnGameStepped() {}
+    // Whether this version offers the CRT post-process (Options > CRT EFFECT, F9).
+    [[nodiscard]] virtual bool HasCrtOption() const { return false; }
 
     void OnStart() override;
     void OnEvent(const SDL_Event& event) override;
@@ -102,6 +106,18 @@ private:
     // Screens drawn over the game; the last one gets the input. While any is open during a game,
     // the game is frozen (paused); on the title screen the rocks keep drifting behind them.
     enum class Overlay : u8 { TitleMenu, PauseMenu, Options, Controls };
+    // The options menu's items, in order (CRT EFFECT only where HasCrtOption).
+    enum class OptionItem : u8 {
+        MasterVolume,
+        SfxVolume,
+        Fullscreen,
+        VSync,
+        ScreenShake,
+        Particles,
+        Crt,
+        Controls,
+        Back
+    };
 
     void BindControls();
     void LoadSoundOverrides();
@@ -122,6 +138,8 @@ private:
     void ApplySettings();
     void SaveSettings();
     void ToggleFullscreen();
+    void ToggleCrt();
+    void BuildOptionsMenu();
     [[nodiscard]] f32 GetSfxVolume() const
     {
         return static_cast<f32>(m_Settings.SfxVolume) / 100.0f;
@@ -142,8 +160,8 @@ private:
     std::vector<Overlay> m_Overlays;
     Menu m_TitleMenu; // START GAME, the mode's extras, OPTIONS, QUIT GAME
     Menu m_PauseMenu{{"RESUME", "OPTIONS", "QUIT TO TITLE", "QUIT GAME"}};
-    Menu m_OptionsMenu{{"MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN", "VSYNC", "SCREEN SHAKE",
-                        "PARTICLES", "CONTROLS", "BACK"}};
+    std::vector<OptionItem> m_OptionItems; // set in OnStart (BuildOptionsMenu)
+    Menu m_OptionsMenu{std::vector<std::string>{}};
     RepeatingPress m_MenuUp;
     RepeatingPress m_MenuDown;
     RepeatingPress m_MenuLeft;

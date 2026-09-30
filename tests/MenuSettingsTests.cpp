@@ -34,10 +34,12 @@ void TestSettingsRoundTrip()
     settings.VSync = false;
     settings.ScreenShake = false;
     settings.Particles = false;
+    settings.Crt = true;
 
     const Settings parsed = Settings::Parse(settings.Serialize());
     Check(parsed.MasterVolume == 30 && parsed.SfxVolume == 70, "volumes survive a round trip");
-    Check(parsed.Fullscreen && !parsed.VSync && !parsed.ScreenShake && !parsed.Particles,
+    Check(parsed.Fullscreen && !parsed.VSync && !parsed.ScreenShake && !parsed.Particles &&
+              parsed.Crt,
           "switches survive a round trip");
 }
 
@@ -57,6 +59,8 @@ void TestSettingsBadInput()
     Check(Settings::Parse("").ScreenShake == defaults.ScreenShake, "empty file gives defaults");
     Check(defaults.Particles && Settings::Parse("particles = off\n").Particles == false,
           "particles default on and can be switched off");
+    Check(!defaults.Crt && Settings::Parse("crt_effect = on\n").Crt,
+          "CRT effect defaults off and can be switched on");
 }
 
 void TestSettingsFile()

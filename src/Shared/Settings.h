@@ -16,6 +16,7 @@ namespace Asteroids {
 //   vsync = on
 //   screen_shake = on
 //   particles = on
+//   crt_effect = off
 //
 // Unknown keys and bad values are ignored (the default stays), so an old or hand-edited file
 // never breaks the game.
@@ -28,6 +29,7 @@ struct Settings {
     bool VSync = true;
     bool ScreenShake = true;
     bool Particles = true; // sparks, dust and exhaust
+    bool Crt = false;      // CRT monitor post-process (only the vector game offers it)
 
     [[nodiscard]] std::string Serialize() const;
     [[nodiscard]] static Settings Parse(std::string_view text);

@@ -79,6 +79,9 @@ Options ParseOptions(i32 argc, char** argv)
         } else if (arg == "--screen") {
             options.Screen = value;
             ++i;
+        } else if (arg == "--crt") {
+            options.Crt = value == "on";
+            ++i;
         }
     }
     return options;
@@ -203,6 +206,9 @@ void AsteroidsApp::OnStart()
     EM_INFO("{} {}; settings file: {}", m_Edition.Title, GameInfo::kVersion,
             m_SettingsFile.empty() ? "none" : m_SettingsFile.string());
     GetWindow().SetIcon(MakeIcon(64));
+    BuildOptionsMenu();
+    if (m_Options.Crt)
+        m_Settings.Crt = *m_Options.Crt; // not saved: automated runs never save (see SaveSettings)
     ApplySettings();
 
     // A 1 x 1 white texture: tinted black and stretched, it darkens the game behind menus.
@@ -256,6 +262,9 @@ void AsteroidsApp::OnEvent(const SDL_Event& event)
             (event.key.scancode == SDL_SCANCODE_F11 ||
              (event.key.scancode == SDL_SCANCODE_RETURN && (event.key.mod & SDL_KMOD_ALT) != 0)))
             ToggleFullscreen();
+        // F9: CRT effect on/off (a quick A/B check; the same switch as in the options).
+        if (!event.key.repeat && event.key.scancode == SDL_SCANCODE_F9 && HasCrtOption())
+            ToggleCrt();
         break;
     case SDL_EVENT_WINDOW_FOCUS_LOST:
         // Alt-tabbed away (or a notification took focus) mid-game: pause.
@@ -477,6 +486,23 @@ void AsteroidsApp::OnImGui()
     ImGui::Text("Sound overrides: %s", m_Overrides.empty() ? "none" : m_Overrides.c_str());
     ImGui::Text("Audio: %s, %zu voices playing", audio.IsAvailable() ? "on" : "no device",
                 audio.GetPlayingCount());
+    if (HasCrtOption()) {
+        ImGui::Separator();
+        bool crt = IsCrtEnabled();
+        if (ImGui::Checkbox("CRT effect (F9)", &crt))
+            ToggleCrt();
+        Emerald::CrtParams& p = GetCrtParams();
+        ImGui::SliderFloat("Curvature", &p.Curvature, 0.0f, 0.3f);
+        ImGui::SliderFloat("Bloom", &p.Bloom, 0.0f, 3.0f);
+        ImGui::SliderFloat("Bloom radius", &p.BloomRadius, 0.2f, 4.0f);
+        ImGui::SliderFloat("Vignette", &p.Vignette, 0.0f, 1.5f);
+        ImGui::SliderFloat("Chromatic offset", &p.ChromaticOffset, 0.0f, 6.0f);
+        ImGui::SliderFloat("Afterglow (s)", &p.Afterglow, 0.0f, 0.3f);
+        ImGui::SliderFloat("Scanlines", &p.Scanlines, 0.0f, 1.0f);
+        ImGui::SliderFloat("Scanline count", &p.ScanlineCount, 100.0f, 1080.0f);
+        ImGui::SliderFloat("Mask", &p.Mask, 0.0f, 1.0f);
+        ImGui::SliderFloat("Brightness", &p.Brightness, 0.5f, 2.0f);
+    }
     ImGui::End();
 #endif
 }
@@ -777,33 +803,36 @@ void AsteroidsApp::UpdateOptions(MenuAction action)
         else
             volume = volume >= 100 ? 0 : Emerald::Min(volume + step, 100u);
     };
-    switch (m_OptionsMenu.GetSelected()) {
-    case 0:
+    switch (m_OptionItems[m_OptionsMenu.GetSelected()]) {
+    case OptionItem::MasterVolume:
         stepVolume(m_Settings.MasterVolume);
         break;
-    case 1:
+    case OptionItem::SfxVolume:
         stepVolume(m_Settings.SfxVolume);
         GetAudio().Play(m_Sounds.Fire, {.Volume = GetSfxVolume()}); // a sample at the new level
         break;
-    case 2:
+    case OptionItem::Fullscreen:
         m_Settings.Fullscreen = !m_Settings.Fullscreen;
         break;
-    case 3:
+    case OptionItem::VSync:
         m_Settings.VSync = !m_Settings.VSync;
         break;
-    case 4:
+    case OptionItem::ScreenShake:
         m_Settings.ScreenShake = !m_Settings.ScreenShake;
         if (m_Settings.ScreenShake)
             AddShake(6.0f); // show what it does (visible once the menu is closed)
         break;
-    case 5:
+    case OptionItem::Particles:
         m_Settings.Particles = !m_Settings.Particles;
         break;
-    case 6:
+    case OptionItem::Crt:
+        m_Settings.Crt = !m_Settings.Crt;
+        break;
+    case OptionItem::Controls:
         if (action == MenuAction::Confirm)
             OpenOverlay(Overlay::Controls);
         return;
-    default:
+    case OptionItem::Back:
         if (action == MenuAction::Confirm)
             CloseOverlay();
         return;
@@ -831,15 +860,39 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
         m_PauseMenu.Draw(r, "PAUSED", 200.0f, {}, m_MenuTime);
         break;
     case Overlay::Options: {
-        const std::string values[] = {std::to_string(m_Settings.MasterVolume),
-                                      std::to_string(m_Settings.SfxVolume),
-                                      onOff(m_Settings.Fullscreen),
-                                      onOff(m_Settings.VSync),
-                                      onOff(m_Settings.ScreenShake),
-                                      onOff(m_Settings.Particles),
-                                      "",
-                                      ""};
-        m_OptionsMenu.Draw(r, "OPTIONS", 130.0f, values, m_MenuTime);
+        std::vector<std::string> values;
+        for (const OptionItem item : m_OptionItems) {
+            switch (item) {
+            case OptionItem::MasterVolume:
+                values.push_back(std::to_string(m_Settings.MasterVolume));
+                break;
+            case OptionItem::SfxVolume:
+                values.push_back(std::to_string(m_Settings.SfxVolume));
+                break;
+            case OptionItem::Fullscreen:
+                values.push_back(onOff(m_Settings.Fullscreen));
+                break;
+            case OptionItem::VSync:
+                values.push_back(onOff(m_Settings.VSync));
+                break;
+            case OptionItem::ScreenShake:
+                values.push_back(onOff(m_Settings.ScreenShake));
+                break;
+            case OptionItem::Particles:
+                values.push_back(onOff(m_Settings.Particles));
+                break;
+            case OptionItem::Crt:
+                values.push_back(onOff(m_Settings.Crt));
+                break;
+            case OptionItem::Controls:
+            case OptionItem::Back:
+                values.emplace_back();
+                break;
+            }
+        }
+        // Laid out for 8 items above the hint line; each extra one (CRT EFFECT) moves it up a row.
+        const f32 extraRows = static_cast<f32>(m_OptionItems.size()) - 8.0f;
+        m_OptionsMenu.Draw(r, "OPTIONS", 130.0f - 46.0f * extraRows, values, m_MenuTime);
         Text::DrawCentered(r, "UP / DOWN: CHOOSE    LEFT / RIGHT: CHANGE    ESC: BACK",
                            kPlayfieldCenter.x, 600.0f, 14.0f, kMenuHint);
         break;
@@ -857,6 +910,8 @@ void AsteroidsApp::ApplySettings()
 {
     GetAudio().SetMasterVolume(static_cast<f32>(m_Settings.MasterVolume) / 100.0f);
     m_Effects.SetEnabled(m_Settings.Particles);
+    if (HasCrtOption() && IsCrtEnabled() != m_Settings.Crt && !SetCrtEnabled(m_Settings.Crt))
+        EM_WARN("CRT effect unavailable; drawing without it");
     if (GetRenderer().IsVSync() != m_Settings.VSync)
         GetRenderer().SetVSync(m_Settings.VSync);
     if (GetWindow().IsFullscreen() != m_Settings.Fullscreen && m_Options.Frames == 0)
@@ -874,6 +929,32 @@ void AsteroidsApp::ToggleFullscreen()
     m_Settings.Fullscreen = !m_Settings.Fullscreen;
     ApplySettings();
     SaveSettings();
+}
+
+void AsteroidsApp::ToggleCrt()
+{
+    m_Settings.Crt = !m_Settings.Crt;
+    ApplySettings();
+    SaveSettings();
+}
+
+void AsteroidsApp::BuildOptionsMenu()
+{
+    m_OptionItems = {OptionItem::MasterVolume, OptionItem::SfxVolume,   OptionItem::Fullscreen,
+                     OptionItem::VSync,        OptionItem::ScreenShake, OptionItem::Particles};
+    if (HasCrtOption())
+        m_OptionItems.push_back(OptionItem::Crt);
+    m_OptionItems.push_back(OptionItem::Controls);
+    m_OptionItems.push_back(OptionItem::Back);
+
+    std::vector<std::string> labels;
+    for (const OptionItem item : m_OptionItems) {
+        constexpr const char* kLabels[] = {"MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN",
+                                           "VSYNC",         "SCREEN SHAKE",   "PARTICLES",
+                                           "CRT EFFECT",    "CONTROLS",       "BACK"};
+        labels.emplace_back(kLabels[static_cast<usize>(item)]);
+    }
+    m_OptionsMenu = Menu(std::move(labels));
 }
 
 void AsteroidsApp::AddShake(f32 amount)

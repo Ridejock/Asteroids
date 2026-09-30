@@ -16,6 +16,7 @@ CONTROLS
   Hyperspace       Shift                     Y / Triangle (top button)
   Pause / menu     Esc  or  P                Start / Options / +
   Fullscreen       F11  or  Alt+Enter
+  CRT effect       F9
   Mute             M                         View / Share / -
 
 Menus: Up / Down to choose, Left / Right to change a value, Enter / Space (or A) to confirm,
@@ -37,7 +38,8 @@ RULES
 OPTIONS AND SAVED FILES
 -----------------------
 Options (pause menu or title screen menu): master volume, effects volume, fullscreen, vsync,
-screen shake, and the controls. Settings, the high score table and the log file are kept in your
+screen shake, particles, CRT effect (a curved, glowing vector monitor look; off by default),
+and the controls. Settings, the high score table and the log file are kept in your
 user folder:
   Windows:  %APPDATA%\Ridejock\@GAME_FILE_NAME@\
             (settings.txt, highscores.txt, logs\@GAME_FILE_NAME@.log)

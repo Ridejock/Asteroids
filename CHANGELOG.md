@@ -17,6 +17,10 @@
   the old letter grid so every layout stays the same. Both fonts are under the SIL Open Font
   License; each zip has its font and license in `assets/fonts/` and in
   `THIRD_PARTY_LICENSES.txt`.
+- ROCK BLASTER: *Options > CRT EFFECT* (and **F9**), off by default and saved in `settings.txt`:
+  Emerald's new CRT post-process (Emerald updated to `781eb01`) with curved glass, phosphor
+  bloom, a short afterglow, a slight chromatic fringe and a vignette; no scanlines, like a vector
+  monitor. `--crt on|off` sets it for one run. ROCK BLASTER ROGUE is unchanged.
 
 ## 1.1.0 (2026-09-30)
 
