@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 
+# Windows: link the C/C++ runtime into the .exe (/MT), so it runs on a clean PC without the
+# Visual C++ Redistributable. Set before any target exists, so the fetched libraries (SDL3,
+# spdlog, Emerald) use the same runtime.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 project(Asteroids
     VERSION 1.0.0
     DESCRIPTION "A vector arcade shooter (and a pixel-art variant) built with the Emerald engine"
@@ -137,6 +142,11 @@ set_target_properties(Asteroids PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}")
 set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}Pixel")
 
 if(WIN32)
+    # Release builds are GUI programs: no console window next to the game (the log still goes
+    # to its file). main() stays the entry point.
+    target_link_options(Asteroids PRIVATE
+        "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/SUBSYSTEM:WINDOWS>"
+        "$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/ENTRY:mainCRTStartup>")
     # Icon and version details of the .exe (Explorer, taskbar, file properties).
     enable_language(RC)
     set(GAME_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon/icon.ico")
@@ -178,3 +188,8 @@ if(ASTEROIDS_BUILD_TESTS)
     add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
     add_test(NAME MenusAndSettings COMMAND AsteroidsMenuTests)
 endif()
+
+# ---------------------------------------------------------------------------
+# Release package (zip for itch.io etc.): see cmake/Packaging.cmake
+# ---------------------------------------------------------------------------
+include(cmake/Packaging.cmake)

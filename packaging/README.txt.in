@@ -1,0 +1,58 @@
+@GAME_TITLE@  -  version @PROJECT_VERSION@
+==================================================
+
+A fast, glowing vector-arcade shooter. Steer your ship through drifting rocks, blast them into
+smaller and smaller pieces, dodge the flying saucers and chase a place in the top 10.
+
+Run @GAME_FILE_NAME@.exe. No installation needed; keep the "shaders" folder next to the .exe.
+
+
+CONTROLS
+--------
+                   Keyboard                  Gamepad (Xbox / PlayStation / Switch)
+  Rotate           A / D  or  Left / Right   left stick or d-pad
+  Thrust           W  or  Up                 left stick up, right trigger or d-pad up
+  Fire             Space                     A / Cross (bottom button) or right shoulder
+  Hyperspace       Shift                     Y / Triangle (top button)
+  Pause / menu     Esc  or  P                Start / Options / +
+  Fullscreen       F11  or  Alt+Enter
+  Mute             M                         View / Share / -
+
+Menus: Up / Down to choose, Left / Right to change a value, Enter / Space (or A) to confirm,
+Esc (or B) to go back. The game pauses by itself when its window loses focus.
+
+
+RULES
+-----
+- You start with 3 ships and get an extra one every 10,000 points.
+- Large rocks split into two medium ones, medium into two small ones.
+  Points: large 20, medium 50, small 100.
+- Flying saucers: the large one (200 points) fires anywhere, the small one (1000 points) aims at
+  you, better and better as your score grows.
+- After a crash your ship comes back in the middle and blinks for 3 seconds, untouchable.
+- Clear the field to start the next wave, with one more large rock.
+- Hyperspace jumps to a random spot. It may save you, or not.
+
+
+OPTIONS AND SAVED FILES
+-----------------------
+Options (pause menu or title screen menu): master volume, effects volume, fullscreen, vsync,
+screen shake, and the controls. Settings, the high score table and the log file are kept in your
+user folder:
+  Windows:  %APPDATA%\Ridejock\@GAME_FILE_NAME@\
+            (settings.txt, highscores.txt, logs\@GAME_FILE_NAME@.log)
+Delete highscores.txt to reset the table.
+
+Needs Windows 10 or 11 and a graphics driver with Direct3D 12 or Vulkan support.
+
+
+CREDITS
+-------
+Game, code, sound design and art: Ervin Ashley.
+Every sound is synthesized by the game while it starts; there are no recordings.
+
+Made with the Emerald engine (https://github.com/Ridejock/Emerald) on top of SDL3
+(https://libsdl.org). Also uses spdlog, {fmt}, stb, dr_mp3 and nlohmann/json.
+
+@GAME_TITLE@ is (C) 2026 Ervin Ashley and released under the MIT License, see LICENSE.txt.
+The licenses of the libraries it uses are in THIRD_PARTY_LICENSES.txt.
