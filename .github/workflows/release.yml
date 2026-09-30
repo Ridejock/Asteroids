@@ -1,0 +1,88 @@
+# Builds the Windows release zip of the vector game on every push to main (and on pull
+# requests), and uploads it as a workflow artifact. Pushing a tag like v1.0.0 also attaches the
+# zip to a GitHub release of that tag.
+name: Windows release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # only used by the release step (tags)
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      # cl.exe, rc.exe and Ninja on PATH, for the Ninja-based presets.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # The shader compiler (SDL_shadercross with DirectXShaderCompiler) takes a long time to
+      # build, so its bin/ folder is cached and reused as a prebuilt tool. Bump the version at
+      # the end of the key after changing Emerald's tools/shadercross.
+      - name: Restore shadercross
+        id: shadercross
+        uses: actions/cache/restore@v4
+        with:
+          path: shadercross-bin
+          key: shadercross-windows-x64-v1
+
+      - name: Configure
+        shell: bash
+        run: |
+          args=()
+          if [ -f shadercross-bin/shadercross.exe ]; then
+            args+=(-DEMERALD_SHADERCROSS_EXECUTABLE="$PWD/shadercross-bin/shadercross.exe")
+          fi
+          cmake --preset release "${args[@]}"
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Test
+        run: ctest --test-dir build/release --output-on-failure
+
+      - name: Package
+        run: cmake --build --preset release --target package
+
+      - name: Save shadercross
+        if: steps.shadercross.outputs.cache-hit != 'true'
+        shell: bash
+        run: cp -r build/_shadercross/bin shadercross-bin
+      - if: steps.shadercross.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: shadercross-bin
+          key: shadercross-windows-x64-v1
+
+      - name: Find the zip
+        id: zip
+        shell: bash
+        run: |
+          zip=$(ls build/release/*-windows-x64.zip)
+          echo "Package: $zip"
+          cmake -E tar tf "$zip"
+          # A shader compiler without DXC silently drops the Direct3D 12 shaders; never ship that.
+          cmake -E tar tf "$zip" | grep -q 'shaders/Renderer2D.frag.dxil' || { echo "::error::No DXIL shaders in the zip"; exit 1; }
+          echo "path=$zip" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$zip" .zip)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.zip.outputs.name }}
+          path: ${{ steps.zip.outputs.path }}
+          if-no-files-found: error
+
+      - name: Attach to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.path }}
