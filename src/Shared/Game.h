@@ -56,9 +56,12 @@ enum class SoundEvent : u8 {
     SaucerExplosion,
 };
 
+// Something that makes a noise. The app also spawns its particle effects from these.
 struct GameSound {
     SoundEvent Event;
-    f32 Pan = 0.0f; // -1 (left edge) .. +1 (right edge), from where it happened
+    f32 Pan = 0.0f;  // -1 (left edge) .. +1 (right edge), from where it happened
+    Vec2 Position{}; // where it happened
+    Vec2 Velocity{}; // of the thing that made it (e.g. a rock that broke), if it moved
 };
 
 // A short-lived bit of an explosion: a dot, or a spinning line when Length > 0.
@@ -182,7 +185,7 @@ private:
     void SpawnExplosion(const Vec2& position, u32 dots, f32 speed);
 
     void DrawInitialsEntry(Emerald::Renderer2D& r) const;
-    void PlaySound(SoundEvent event, const Vec2& position);
+    void PlaySound(SoundEvent event, const Vec2& position, const Vec2& velocity = {});
     void UpdateHeartbeat(f32 dt);
     [[nodiscard]] f32 GetBeatInterval() const;
 

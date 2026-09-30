@@ -345,7 +345,7 @@ void Game::BreakAsteroid(const Asteroid& asteroid, std::vector<Asteroid>& fragme
     const SoundEvent boom = asteroid.Size == AsteroidSize::Large    ? SoundEvent::ExplosionLarge
                             : asteroid.Size == AsteroidSize::Medium ? SoundEvent::ExplosionMedium
                                                                     : SoundEvent::ExplosionSmall;
-    PlaySound(boom, asteroid.Position);
+    PlaySound(boom, asteroid.Position, asteroid.Velocity);
 }
 
 f32 Game::NextSaucerDelay()
@@ -439,7 +439,8 @@ void Game::DestroySaucer()
 {
     SpawnDebris(m_Saucer->Position, m_Saucer->Velocity, 4);
     SpawnExplosion(m_Saucer->Position, 10, 110.0f);
-    PlaySound(SoundEvent::SaucerExplosion, m_Saucer->Position);
+    PlaySound(SoundEvent::SaucerExplosion, m_Saucer->Position, m_Saucer->Velocity);
+    EM_INFO("Saucer destroyed (score {})", m_Score);
     m_Saucer.reset();
     m_SaucerTimer = NextSaucerDelay();
 }
@@ -464,7 +465,7 @@ void Game::DestroyShip()
     // The hull breaks into a few spinning lines, plus some dots.
     SpawnDebris(m_Ship.Position, m_Ship.Velocity, 5);
     SpawnExplosion(m_Ship.Position, 12, 120.0f);
-    PlaySound(SoundEvent::ShipExplosion, m_Ship.Position);
+    PlaySound(SoundEvent::ShipExplosion, m_Ship.Position, m_Ship.Velocity);
 
     --m_Lives;
     ++m_ShipsLost;
@@ -548,11 +549,11 @@ void Game::SpawnDebris(const Vec2& position, const Vec2& velocity, u32 lines)
     }
 }
 
-void Game::PlaySound(SoundEvent event, const Vec2& position)
+void Game::PlaySound(SoundEvent event, const Vec2& position, const Vec2& velocity)
 {
     // Pan by the horizontal position, but never fully to one side.
     const f32 pan = (position.x / kPlayfieldSize.x * 2.0f - 1.0f) * 0.6f;
-    m_Sounds.push_back({event, pan});
+    m_Sounds.push_back({event, pan, position, velocity});
 }
 
 void Game::UpdateHeartbeat(f32 dt)

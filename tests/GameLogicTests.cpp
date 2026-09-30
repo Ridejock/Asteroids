@@ -7,6 +7,7 @@
 
 #include "Check.h"
 #include "HighScores.h"
+#include "ParticleEffects.h"
 #include "Playfield.h"
 #include "Saucer.h"
 
@@ -125,6 +126,30 @@ void TestSaucerAim()
     Check(Asteroids::SmallSaucerChance(40000) == 1.0f, "and certain from 40000");
 }
 
+void TestParticleEffects()
+{
+    using Asteroids::SoundEvent;
+    Asteroids::ParticleEffects effects;
+    const auto count = [&] { return effects.GetParticles().GetCount(); };
+    effects.OnSound({.Event = SoundEvent::Fire});
+    Check(count() == 0, "shots make no particles");
+    effects.OnSound({.Event = SoundEvent::ExplosionSmall});
+    const u32 small = count();
+    effects.Clear();
+    effects.OnSound({.Event = SoundEvent::ExplosionLarge});
+    Check(small > 0 && count() > small, "bigger rocks make more sparks and dust");
+    effects.Clear();
+    effects.OnSound({.Event = SoundEvent::ShipExplosion});
+    Check(count() > 100, "the ship explodes in a big burst");
+    effects.Clear();
+    effects.OnSound({.Event = SoundEvent::SaucerExplosion});
+    Check(count() > 0, "a hit saucer throws debris");
+    effects.SetEnabled(false);
+    Check(count() == 0, "switching particles off clears them");
+    effects.OnSound({.Event = SoundEvent::ShipExplosion});
+    Check(count() == 0, "and no new ones appear");
+}
+
 } // namespace
 
 int main()
@@ -134,6 +159,7 @@ int main()
     TestInitials();
     TestSerializeAndParse();
     TestSaucerAim();
+    TestParticleEffects();
     std::printf("%d failed\n", g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }

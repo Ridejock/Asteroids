@@ -64,6 +64,8 @@ protected:
         white.Height = 1;
         white.Pixels = {255, 255, 255, 255};
         m_White = Emerald::Texture::Create(device, white);
+        if (m_White)
+            m_WhiteSprite = Emerald::Sprite::FromTexture(*m_White);
 
         if (m_Atlas) {
             m_Ship = m_Atlas->Get("ship");
@@ -152,6 +154,15 @@ protected:
         }
     }
 
+    // Particles as small glowing squares instead of streaks (the effects' sizes are streak
+    // lengths, so they are scaled down).
+    [[nodiscard]] Emerald::ParticleDrawOptions GetParticleDrawOptions() const override
+    {
+        if (!m_White)
+            return {};
+        return {.Sprite = &m_WhiteSprite, .SizeScale = 0.45f};
+    }
+
     void DrawHud(Emerald::Renderer2D& r) override
     {
         const Game& game = GetGame();
@@ -223,6 +234,7 @@ private:
 
     std::optional<Emerald::TextureAtlas> m_Atlas;
     std::optional<Emerald::Texture> m_White;
+    Emerald::Sprite m_WhiteSprite; // all of m_White
     Sprite m_Ship;
     Sprite m_ShipNoFlame;
     Sprite m_Saucer;

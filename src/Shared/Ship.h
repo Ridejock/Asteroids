@@ -32,6 +32,7 @@ struct Ship {
 
     [[nodiscard]] Vec2 Forward() const;
     [[nodiscard]] Vec2 NosePosition() const;
+    [[nodiscard]] Vec2 EnginePosition() const; // middle of the back bar, where the flame starts
 
     // Draws the hull (and a flame of `flameLength` pixels when > 0) at `position`, which is
     // Position or one of its wrapped copies.

@@ -76,9 +76,10 @@ During a game, **Esc / P / pad Start pauses** with a menu: *Resume*, *Options*, 
 *Quit game*. The game also pauses by itself when its window loses focus (Alt+Tab).
 
 **Options:** master volume and effects volume (0–100 in steps of 10), fullscreen (borderless, on
-the current display), vsync, screen shake (a short jolt on explosions), and the controls
-reference. Every change applies at once and is saved to `settings.txt` in the per-user folder
-(see [High scores](#high-scores) for where that is), one `key = value` per line:
+the current display), vsync, screen shake (a short jolt on explosions), particles (sparks, dust and engine exhaust; see
+[Particles](#particles)), and the controls reference. Every change applies at once and is saved to
+`settings.txt` in the per-user folder (see [High scores](#high-scores) for where that is), one
+`key = value` per line:
 
 ```
 master_volume = 80
@@ -86,10 +87,27 @@ sfx_volume = 100
 fullscreen = off
 vsync = on
 screen_shake = on
+particles = on
 ```
 
 Unknown keys and bad values are ignored, so a hand-edited file cannot break the game. (Runs with
 `--frames` never write it and always start windowed.)
+
+## Particles
+
+On top of the classic debris, both versions show particle effects from Emerald's
+`ParticleSystem` (drawn additively, so they glow where they overlap):
+
+| When | What |
+|---|---|
+| A rock breaks | hot sparks plus a puff of blue-grey dust spread over the rock; more and wider for bigger rocks |
+| The ship explodes | a white-orange fireball and a thin blue shock ring |
+| A saucer is hit | white-cyan shards and a few sparks |
+| Thrusting | a short exhaust trail out of the back of the ship, carried along with it |
+
+The vector version draws them as short streaks along their motion, the pixel version as small
+squares. They are purely visual (`src/Shared/ParticleEffects.cpp` only reads the game and has its
+own random numbers), so a game plays exactly the same with *Options > Particles* on or off.
 
 ## Sound
 
@@ -350,6 +368,7 @@ tools/IconGen writes assets/icon/ (the UpdateIcon target)
 | `src/Shared/AsteroidsApp.h/.cpp` | The shared `Emerald::Application`: command line options, binds the controls as input actions, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window in `OnRender2D` and calls the version's `DrawWorld` + `DrawHud`; plays the game's sound events and the thrust and saucer loops; loads and saves the high scores |
 | `src/Vector/Main.cpp` | `VectorAsteroids`: `DrawWorld` with outlines (rocks, ship + flame, saucer, bullets, debris), `highscores.txt` |
 | `src/Pixel/Main.cpp` | `PixelAsteroids`: loads the atlas in `OnLoadAssets`; `DrawWorld` with sprites scaled to the collision radii (see `Look::` constants), a procedural starfield, pixel bullets and sparks; ship sprites as life icons; `highscores_pixel.txt` |
+| `src/Shared/ParticleEffects.h/.cpp` | The particle effects (one `ParticleEmitterConfig` each) spawned from the game's sound events, and the exhaust |
 | `src/Shared/Screens.h/.cpp` | The title screen: glowing logo, page cycling, the controls table |
 | `src/Shared/Menu.h/.cpp` | A vertical vector-font menu (selection, wrap-around, values on the right) used by the title, pause and options menus |
 | `src/Shared/Settings.h/.cpp` | The options and `settings.txt` |
@@ -366,12 +385,13 @@ tools/IconGen writes assets/icon/ (the UpdateIcon target)
 | `src/Shared/Playfield.h` | The fixed 1280 × 720 logical playfield: wrap-around, wrapped distances, drawing objects on both sides of an edge |
 | `src/Shared/Random.h` | Tiny `std::mt19937` helper |
 | `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |
-| `tests/GameLogicTests.cpp` | ctest for the high score table and the saucer's aim |
+| `tests/GameLogicTests.cpp` | ctest for the high score table, the saucer's aim and which events make particles |
 | `tests/MenuSettingsTests.cpp` | ctest for settings.txt, menu navigation and the title screen pages |
 
 The game logic (`Game`) never touches the window or GPU: it gets a `GameInput` per fixed step, and
 the executables draw its state into a `Renderer2D` that `AsteroidsApp` has already set up with the
-right projection. The playfield is always 1280 × 720 logical pixels, scaled uniformly to the window
+right projection (the particles are drawn by `AsteroidsApp` right after `DrawWorld`; a version only
+picks their look with `GetParticleDrawOptions`). The playfield is always 1280 × 720 logical pixels, scaled uniformly to the window
 with black bars (and clipped) when the aspect ratio differs, so resizing the window never changes the
 gameplay. Collisions use the same radii in both versions; the pixel version only scales its sprites
 to match them, and picks between the two looks of each rock size by its spin direction, so it uses

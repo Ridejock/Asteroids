@@ -280,6 +280,7 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
             return; // paused
         m_TitleTime += dt;
         m_Game.Update({}, dt); // the title screen's rocks keep drifting behind its menus
+        m_Effects.Update(m_Game, dt);
         PlayGameSounds();
         return;
     }
@@ -318,6 +319,7 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
         m_ShipsLost = m_Game.GetShipsLost();
         in.Rumble(0.8f, 0.4f, 300);
     }
+    m_Effects.Update(m_Game, dt); // (reads the sounds, so before PlayGameSounds clears them)
     PlayGameSounds();
 }
 
@@ -365,6 +367,7 @@ void AsteroidsApp::OnRender2D(Emerald::Renderer2D& r)
 
     r.Begin(viewProjection, clip);
     DrawWorld(r);
+    m_Effects.Draw(r, GetParticleDrawOptions());
     if (!m_Game.IsOnTitle())
         DrawHud(r);
     else if (m_Options.Screen == "logo")
@@ -392,6 +395,8 @@ void AsteroidsApp::OnImGui()
     ImGui::Text("Score %u, lives %u%s", m_Game.GetScore(), m_Game.GetLives(),
                 m_Game.IsGameOver() ? " (game over)" : "");
     const Emerald::Renderer2D& r2d = GetRenderer2D();
+    ImGui::Text("Particles: %u / %u", m_Effects.GetParticles().GetCount(),
+                m_Effects.GetParticles().GetCapacity());
     ImGui::Text("Drawn: %u lines, %u sprites, %u draw calls", r2d.GetLastFrameLineCount(),
                 r2d.GetLastFrameSpriteCount(), r2d.GetLastFrameDrawCalls());
     // Testing shortcuts.
@@ -613,6 +618,7 @@ void AsteroidsApp::QuitToTitle()
 {
     m_Overlays.clear();
     m_Game.ShowTitle();
+    m_Effects.Clear();
     m_TitleTime = 0.0f;
 }
 
@@ -709,6 +715,9 @@ void AsteroidsApp::UpdateOptions(MenuAction action)
             AddShake(6.0f); // show what it does (visible once the menu is closed)
         break;
     case 5:
+        m_Settings.Particles = !m_Settings.Particles;
+        break;
+    case 6:
         if (action == MenuAction::Confirm)
             OpenOverlay(Overlay::Controls);
         return;
@@ -745,6 +754,7 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
                                       onOff(m_Settings.Fullscreen),
                                       onOff(m_Settings.VSync),
                                       onOff(m_Settings.ScreenShake),
+                                      onOff(m_Settings.Particles),
                                       "",
                                       ""};
         m_OptionsMenu.Draw(r, "OPTIONS", 130.0f, values, m_MenuTime);
@@ -765,6 +775,7 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
 void AsteroidsApp::ApplySettings()
 {
     GetAudio().SetMasterVolume(static_cast<f32>(m_Settings.MasterVolume) / 100.0f);
+    m_Effects.SetEnabled(m_Settings.Particles);
     if (GetRenderer().IsVSync() != m_Settings.VSync)
         GetRenderer().SetVSync(m_Settings.VSync);
     if (GetWindow().IsFullscreen() != m_Settings.Fullscreen && m_Options.Frames == 0)

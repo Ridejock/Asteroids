@@ -9,6 +9,7 @@
 
 #include "Game.h"
 #include "Menu.h"
+#include "ParticleEffects.h"
 #include "Random.h"
 #include "Screens.h"
 #include "Settings.h"
@@ -72,6 +73,9 @@ protected:
     virtual void DrawWorld(Emerald::Renderer2D& r) = 0;
     // The HUD; the default is the shared vector font HUD.
     virtual void DrawHud(Emerald::Renderer2D& r) { m_Game.DrawHud(r); }
+    // How the particle effects look (drawn right after DrawWorld); the default is glowing
+    // streaks, which suits the vector look.
+    [[nodiscard]] virtual Emerald::ParticleDrawOptions GetParticleDrawOptions() const { return {}; }
 
     [[nodiscard]] const Game& GetGame() const { return m_Game; }
 
@@ -118,12 +122,13 @@ private:
     std::string m_HighScoresName;
     Game m_Game;
     u32 m_ShipsLost = 0;
+    ParticleEffects m_Effects;
 
     std::vector<Overlay> m_Overlays;
     Menu m_TitleMenu{{"START GAME", "OPTIONS", "QUIT GAME"}};
     Menu m_PauseMenu{{"RESUME", "OPTIONS", "QUIT TO TITLE", "QUIT GAME"}};
     Menu m_OptionsMenu{{"MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN", "VSYNC", "SCREEN SHAKE",
-                        "CONTROLS", "BACK"}};
+                        "PARTICLES", "CONTROLS", "BACK"}};
     RepeatingPress m_MenuUp;
     RepeatingPress m_MenuDown;
     RepeatingPress m_MenuLeft;

@@ -40,6 +40,11 @@ Vec2 Ship::NosePosition() const
     return Position + Forward() * kNoseDistance;
 }
 
+Vec2 Ship::EnginePosition() const
+{
+    return Position + Forward() * kBarX;
+}
+
 void Ship::Update(const ShipControls& controls, f32 dt)
 {
     // With +Y down, a growing angle turns clockwise on screen, i.e. to the right.

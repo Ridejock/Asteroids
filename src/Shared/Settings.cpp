@@ -52,7 +52,8 @@ std::string Settings::Serialize() const
         << "sfx_volume = " << SfxVolume << '\n'
         << "fullscreen = " << OnOff(Fullscreen) << '\n'
         << "vsync = " << OnOff(VSync) << '\n'
-        << "screen_shake = " << OnOff(ScreenShake) << '\n';
+        << "screen_shake = " << OnOff(ScreenShake) << '\n'
+        << "particles = " << OnOff(Particles) << '\n';
     return out.str();
 }
 
@@ -79,6 +80,8 @@ Settings Settings::Parse(std::string_view text)
             ParseBool(value, settings.VSync);
         else if (key == "screen_shake")
             ParseBool(value, settings.ScreenShake);
+        else if (key == "particles")
+            ParseBool(value, settings.Particles);
     }
     return settings;
 }

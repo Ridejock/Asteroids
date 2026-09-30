@@ -15,6 +15,7 @@ namespace Asteroids {
 //   fullscreen = off
 //   vsync = on
 //   screen_shake = on
+//   particles = on
 //
 // Unknown keys and bad values are ignored (the default stays), so an old or hand-edited file
 // never breaks the game.
@@ -26,6 +27,7 @@ struct Settings {
     bool Fullscreen = false;
     bool VSync = true;
     bool ScreenShake = true;
+    bool Particles = true; // sparks, dust and exhaust
 
     [[nodiscard]] std::string Serialize() const;
     [[nodiscard]] static Settings Parse(std::string_view text);
