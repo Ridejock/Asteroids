@@ -286,7 +286,7 @@ The release is a zip of the vector version for 64-bit Windows:
 cmake --preset release
 cmake --build --preset release
 cmake --build --preset release --target package
-# -> build\release\RockBlaster-1.0.0-windows-x64.zip
+# -> build\release\RockBlaster-1.1.0-windows-x64.zip
 ```
 
 It contains `RockBlaster.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
@@ -295,21 +295,22 @@ credits, generated from `packaging/README.txt.in`), `LICENSE.txt` and `THIRD_PAR
 (the licenses of Emerald, SDL3 with HIDAPI, spdlog + {fmt}, stb, nlohmann/json and dr_mp3, taken
 from the fetched sources at configure time). Nothing from `assets/` is packaged. The rules are in
 `cmake/Packaging.cmake`; `cmake --install build/release --component Game --prefix <dir>` gives
-the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`.
+the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`; what
+changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 **GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
-push to `main` and uploads the zip as a workflow artifact. Pushing a tag `v1.0.0` (etc.) also
+push to `main` and uploads the zip as a workflow artifact. Pushing a tag `v1.1.0` (etc.) also
 attaches it to a GitHub release:
 
 ```sh
-git tag v1.0.0 && git push origin v1.0.0
+git tag v1.1.0 && git push origin v1.1.0
 ```
 
 **Uploading to itch.io** with [butler](https://itch.io/docs/butler/) (after creating the game page
 on itch.io; `butler login` once):
 
 ```sh
-butler push RockBlaster-1.0.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.0.0
+butler push RockBlaster-1.1.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.1.0
 ```
 
 The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship
