@@ -416,6 +416,11 @@ void RogueGame::UpdateInitials(const GameInput& input)
 
 bool RogueGame::OpenDebugScreen(std::string_view name)
 {
+    // "<screen>+god": hits only flash the shield (for recording gameplay with a dumb bot).
+    if (name.ends_with("+god")) {
+        m_GodMode = true;
+        name.remove_suffix(4);
+    }
     // Runs with a few upgrades, so the screenshots show a bit of everything.
     const auto withUpgrades = [&](const Stage& stage, u32 picks) {
         NewRun(m_Meta.Selected, stage);
@@ -1182,8 +1187,9 @@ void RogueGame::HitShip()
 {
     if (!m_ShipAlive || m_InvulnerableTimer > 0.0f)
         return;
-    if (m_Shield > 0) {
-        --m_Shield;
+    if (m_Shield > 0 || m_GodMode) {
+        if (m_Shield > 0 && !m_GodMode)
+            --m_Shield;
         m_InvulnerableTimer = kShieldInvulnerable;
         m_ShieldGlow = 1.0f;
         PlaySound(SoundEvent::ShieldHit, m_Ship.Position, m_Ship.Velocity);

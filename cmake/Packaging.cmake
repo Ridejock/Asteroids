@@ -75,8 +75,9 @@ install(FILES "${package_dir}/README.txt" "${package_dir}/LICENSE.txt" "${notice
 install(TARGETS AsteroidsPixel RUNTIME DESTINATION . COMPONENT Rogue)
 install(DIRECTORY "$<TARGET_FILE_DIR:AsteroidsPixel>/shaders/" DESTINATION shaders
         COMPONENT Rogue)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/" DESTINATION assets/pixel
-        COMPONENT Rogue FILES_MATCHING PATTERN "atlas.*")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/atlas.png"
+              "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/atlas.json"
+        DESTINATION assets/pixel COMPONENT Rogue)
 install(FILES "${package_dir}/rogue/README.txt" "${package_dir}/LICENSE.txt" "${notices}"
         DESTINATION . COMPONENT Rogue)
 

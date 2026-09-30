@@ -1,9 +1,8 @@
 """Roguelike sprites for RockBlasterRogue, made in code in the style of the existing ones
-# Part of the pixel sprites' tool chain (see assets/pixel/README.md). The paths below are the
-# sprite workspace this was run in; pack.py (not included) then builds atlas.png/json.
 (dark outline, top-left light, few colors): rock kinds recolored from the rock sprites, ship
 variants from the ship, bosses built like procgen.enemy/asteroid, 16x16 upgrade icons drawn by hand.
 usage: python rogue.py  (writes /workspace/sprites/rogue/*.png)
+The paths are the sprite workspace this was run in; its pack.py then builds atlas.png/json.
 """
 import numpy as np
 from PIL import Image

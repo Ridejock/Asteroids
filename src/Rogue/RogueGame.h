@@ -133,7 +133,8 @@ public:
     [[nodiscard]] usize GetAsteroidCount() const override { return m_Rocks.size(); }
     void SpawnSaucer(SaucerSize size) override;
     void ForceGameOver(u32 score) override;
-    // "hangar", "upgrades" (the picker), "boss1".."boss3", "sector1".."sector3", "results".
+    // "hangar", "upgrades" (the picker), "boss1".."boss3", "sector1".."sector3", "results";
+    // "+god" appended makes the ship indestructible (for recordings).
     bool OpenDebugScreen(std::string_view name) override;
 
     // --- Meta progress: the app loads it at startup and saves it when it changed ---
@@ -296,6 +297,7 @@ private:
     Prompts m_Prompts;
     u32 m_ShipsLost = 0;
     std::vector<GameSound> m_Sounds;
+    bool m_GodMode = false; // debug: hits never destroy the ship
 };
 
 } // namespace Asteroids::Rogue

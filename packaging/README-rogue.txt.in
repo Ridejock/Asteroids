@@ -1,4 +1,69 @@
 @PIXEL_TITLE@  -  version @PROJECT_VERSION@
 ==================================================
 
-(filled in below)
+A pixel-art roguelike shooter. Fight through three sectors of drifting rocks and flying saucers,
+pick an upgrade after every wave, beat a boss at the end of each sector - with one ship. Spend
+the scrap from your runs in the hangar on new ships and upgrades.
+
+Run @PIXEL_FILE_NAME@.exe. No installation needed; keep the "shaders" and "assets" folders next
+to the .exe.
+
+
+CONTROLS
+--------
+                   Keyboard                  Gamepad (Xbox / PlayStation / Switch)
+  Rotate           A / D  or  Left / Right   left stick or d-pad
+  Thrust           W  or  Up                 left stick up, right trigger or d-pad up
+  Fire (hold)      Space                     A / Cross (bottom button) or right shoulder
+  Hyperspace       Shift                     Y / Triangle (top button)
+  Pause / menu     Esc  or  P                Start / Options / +
+  Fullscreen       F11  or  Alt+Enter
+  Mute             M                         View / Share / -
+
+Menus, the upgrade picker and the hangar: Up / Down / Left / Right to choose, Enter / Space
+(or A) to confirm, Esc (or B) to go back. The hangar is in the title screen menu (Esc).
+
+
+A RUN
+-----
+- 3 sectors x 4 waves, and a boss at the end of each sector. One ship: when it's destroyed, the
+  run is over. Beat the third boss to win.
+- After each wave choose one of three upgrades. They stack:
+    Spread shot, Piercing rounds, Rapid fire, Shield (absorbs a hit, recharges every wave),
+    Thruster, Hyper blast (hyperspace damages what's near), and from the hangar: Homing
+    missiles, Rear gun, Long range, Scrap magnet.
+- Rocks: plain, explosive (they blow up everything near them - you too), metal (several hits)
+  and green splitters (three fast pieces). Saucers get tougher in deeper sectors.
+- Bosses: The Monolith, The Mothership and The Bastion.
+- Collect the scrap that destroyed things drop. At the end of a run you earn that scrap plus a
+  bonus for every wave, boss and 250 points.
+
+
+HANGAR
+------
+Ships: Striker (free), Bulwark (starts with a shield), Wasp (fast, rapid fire), Lancer (piercing
+long shots). Upgrades bought here join the pool the run's offers are drawn from.
+
+
+OPTIONS AND SAVED FILES
+-----------------------
+Options (pause menu or title screen menu): master volume, effects volume, fullscreen, vsync,
+screen shake, particles, and the controls. Settings, the high scores, the hangar progress and
+the log file are kept in your user folder:
+  Windows:  %APPDATA%\Ridejock\@PIXEL_FILE_NAME@\
+            (settings.txt, highscores.txt, meta.txt, logs\@PIXEL_FILE_NAME@.log)
+Delete meta.txt to start the hangar over, highscores.txt to reset the table.
+
+Needs Windows 10 or 11 and a graphics driver with Direct3D 12 or Vulkan support.
+
+
+CREDITS
+-------
+Game, code, sound design and art: Ervin Ashley.
+Every sound is synthesized by the game while it starts; there are no recordings.
+
+Made with the Emerald engine (https://github.com/Ridejock/Emerald) on top of SDL3
+(https://libsdl.org). Also uses spdlog, {fmt}, stb, dr_mp3 and nlohmann/json.
+
+@PIXEL_TITLE@ is (C) 2026 Ervin Ashley and released under the MIT License, see LICENSE.txt.
+The licenses of the libraries it uses are in THIRD_PARTY_LICENSES.txt.

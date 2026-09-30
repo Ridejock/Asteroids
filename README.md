@@ -8,30 +8,33 @@ published under its own title, set in one place (see [The game's name](#the-game
 original work: its code, look and sounds are made from scratch, and it uses no assets of any
 other game.
 
-It comes in two versions that play exactly the same (same rules, sounds, controls and code, apart
-from drawing):
+It comes as two games on one shared code base (application loop, controls, menus, sounds,
+particle effects, ship, rocks, saucers, high scores):
 
-- **Vector** (target `Asteroids`, `RockBlaster.exe`): everything on screen (ship, rocks, bullets,
-  explosions, the logo, even the score digits and letters) is drawn with lines by Emerald's
-  `Renderer2D`; there are no textures or font files. **This is the released game.**
-- **Pixel** (target `AsteroidsPixel`, `RockBlasterPixel.exe`): sprites from `assets/pixel/` (one
-  texture atlas) over a twinkling starfield, with small pixel bullets and sparks. The text keeps
-  the vector font. Not part of the release.
+- **ROCK BLASTER** (vector, target `Asteroids`, `RockBlaster.exe`): the classic arcade game.
+  Everything on screen (ship, rocks, bullets, explosions, the logo, even the score digits and
+  letters) is drawn with lines by Emerald's `Renderer2D`; there are no textures or font files.
+- **ROCK BLASTER ROGUE** (pixel, target `AsteroidsPixel`, `RockBlasterRogue.exe`): a roguelike on
+  the same controls: runs of 3 sectors with bosses, an upgrade after every wave, permadeath, and a
+  hangar where the scrap from your runs buys new ships and upgrades. Sprites from `assets/pixel/`
+  (one texture atlas) over a twinkling starfield; the text keeps the vector font. See
+  [ROCK BLASTER ROGUE](#rock-blaster-rogue-the-pixel-version).
 
 ## The game's name
 
-The game is called "ROCK BLASTER". The title exists in exactly one place, the CMake cache variable
-**`GAME_TITLE`** at the top of `CMakeLists.txt`:
+The game is called "ROCK BLASTER", the pixel roguelike "ROCK BLASTER ROGUE". Each title exists in
+exactly one place, the CMake cache variables **`GAME_TITLE`** and **`PIXEL_TITLE`** at the top of
+`CMakeLists.txt`:
 
 ```sh
 cmake --preset release -DGAME_TITLE="NEW NAME"   # or change the default in CMakeLists.txt
 ```
 
-It feeds the window title, the title screen logo, the `.exe` names (`GAME_FILE_NAME`, derived as
-PascalCase: "NEW NAME" → `NewName.exe`, `NewNamePixel.exe`; set it to override), the Windows
+It feeds the window title, the title screen logo, the `.exe` name (`GAME_FILE_NAME` /
+`PIXEL_FILE_NAME`, derived as PascalCase: "NEW NAME" → `NewName.exe`; set it to override), the Windows
 version resource (file description, product name), the per-user folder for settings and high
 scores, the README in the package, and the zip's name. The code reads it from the generated
-`GameInfo.h` (`src/Shared/GameInfo.h.in`). Upper case looks best in the vector font (A–Z, 0–9 and
+`GameInfo.h` (`src/Shared/GameInfo.h.in`, one `GameInfo::Edition` per game). Upper case looks best in the vector font (A–Z, 0–9 and
 a few symbols).
 
 ![Vector version](docs/screenshot.png)
@@ -171,6 +174,48 @@ them. Both versions use the same sounds and overrides.
 - Clear the field to start the next wave, which has one more large rock (up to 11).
 - Everything wraps around the screen edges.
 
+## ROCK BLASTER ROGUE (the pixel version)
+
+Same ship, same controls (hold **Fire** to keep shooting), but a **run** instead of lives:
+
+- A run is **3 sectors × 4 waves**, and a **boss** ends each sector. You have one ship:
+  **permadeath**, the run ends when it's destroyed. Clear all three bosses to win.
+- After every wave pick **one of three random upgrades** (Left / Right, then Enter / Space / A).
+  Upgrades stack up to their maximum level:
+
+  | Upgrade | Max | Effect |
+  |---|---|---|
+  | Spread shot | 2 | +2 shots per volley, fanned out |
+  | Piercing rounds | 3 | a shot passes through one more rock it destroys |
+  | Rapid fire | 3 | 25% shorter cooldown, 2 more volleys on screen |
+  | Shield | 3 | absorbs one hit per level; recharges every wave |
+  | Thruster | 3 | +20% acceleration and top speed (and faster turning) |
+  | Hyper blast | 3 | hyperspace sets off a shock wave at both ends of the jump |
+  | Homing missiles* | 3 | a seeking missile every 3 / 1.5 / 1 s (2 damage) |
+  | Rear gun* | 2 | also fires backwards |
+  | Long range* | 2 | faster, longer-lived shots |
+  | Scrap magnet* | 2 | pulls scrap in from further away |
+
+  \* bought into the pool in the hangar.
+- **Rocks**: plain; **explosive** (glowing, blows up and damages everything near it, the ship
+  too); **metal** (4 / 3 / 2 hits by size, breaks into metal); **splitters** (green, break into
+  three faster pieces). Deeper sectors have more rocks and more special ones, and saucers that come
+  more often, aim better and take more hits.
+- **Bosses** (health bar at the top): **The Monolith**, a giant armored rock that sheds metal
+  chunks as it's damaged and splits into four when destroyed; **The Mothership**, which sways across
+  the top, launches escort saucers and fires aimed fans; **The Bastion**, a turret station in the
+  middle spraying rotating arms of bullets (more arms as it gets hurt, with short pauses).
+- Destroyed things drop **scrap**; fly over it to collect it. At the end of a run you earn the
+  scrap you collected plus 10 per wave, 50 per boss, 1 per 250 points and 200 for a win.
+- **Hangar** (title screen menu: Esc, *HANGAR*): spend scrap on ships and on upgrades for the
+  pool. Ships: **Striker** (free, balanced), **Bulwark** (250: heavier, starts with a shield),
+  **Wasp** (400: fast, starts with rapid fire), **Lancer** (600: slow gun, starts with piercing,
+  longer shots).
+- The high score table keeps how far each run got (e.g. `S2 W3`, `S3 BOSS`, `WIN`).
+
+The rules are in `src/Rogue/` (`RogueGame`), all random numbers come from one seeded `Random`, so
+the same seed and input replay the same run (the tests use this).
+
 ## High scores
 
 The **top 10** are kept, arcade style, with 3-letter initials. If your score makes the table,
@@ -181,8 +226,9 @@ shown small at the top of the screen while you play.
 
 The table is saved as a plain text file in your per-user folder (`Paths::GetPrefPath("Ridejock",
 GAME_FILE_NAME)` from Emerald, via SDL), next to `settings.txt` and the `logs/` folder. Each
-version keeps its own table: `highscores.txt` for the vector version, `highscores_pixel.txt` for
-the pixel one. With the default name the folder is:
+game has its own folder (`RockBlaster`, `RockBlasterRogue`) with its own `highscores.txt`; the
+roguelike also keeps its hangar progress there in `meta.txt` (`scrap=`, `ships=`, `upgrades=`, ...;
+delete it to start over). With the default name the folder is:
 
 | OS | Folder |
 |---|---|
@@ -194,7 +240,8 @@ the pixel one. With the default name the folder is:
 `highscores.txt` and `settings.txt` over to keep them.)
 
 The log shows the exact path at startup (`High scores file: ...`). Each line is initials, a space,
-and the score, e.g. `ABC 12340` (initials are always 3 characters and may contain spaces). A missing
+and the score, e.g. `ABC 12340` (initials are always 3 characters and may contain spaces; the
+roguelike adds a note, e.g. `ABC 12340 S2 W3`). A missing
 file means an empty table; unreadable lines are skipped; the file is rewritten (via a temporary
 file) whenever an entry is added. Delete it to reset the table.
 
@@ -272,22 +319,30 @@ RockBlaster --saucer small                      # testing: a game with a saucer 
 RockBlaster --game-over 12345                   # testing: end at once with this score
 ```
 
+The roguelike also knows `--screen hangar`, `upgrades` (the picker), `boss1`..`boss3`,
+`sector1`..`sector3` and `results`; append `+god` (e.g. `boss2+god`) for an indestructible ship
+(recordings).
+
 The debug-full build's ImGui panel also has *Large saucer*, *Small saucer* and *Game over* buttons.
 
-The log is written to `logs/RockBlaster.log` (`logs/RockBlasterPixel.log` for the pixel version) in
+The log is written to `logs/RockBlaster.log` (`logs/RockBlasterRogue.log` for the roguelike) in
 the per-user folder (see [High scores](#high-scores)), so it works from a read-only install too. If the pixel version cannot find its sprites (`assets/pixel/` next to the
 executable) it logs an error and draws the objects' outlines instead.
 
 ## Release (itch.io)
 
-The release is a zip of the vector version for 64-bit Windows:
+Each game has its own zip for 64-bit Windows (and its own itch.io page):
 
 ```powershell
 cmake --preset release
 cmake --build --preset release
 cmake --build --preset release --target package
 # -> build\release\RockBlaster-1.1.0-windows-x64.zip
+#    build\release\RockBlasterRogue-1.1.0-windows-x64.zip
 ```
+
+The roguelike's zip has `RockBlasterRogue.exe`, the shaders, `assets\pixel\atlas.png/json` and
+its own `README.txt` (`packaging/README-rogue.txt.in`); the rest is as below.
 
 It contains `RockBlaster.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
 runs on a clean Windows 10/11 PC), the compiled `shaders\` folder, `README.txt` (controls, rules,
@@ -299,8 +354,8 @@ the same files unzipped. The version is `project(... VERSION ...)` in `CMakeList
 changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 **GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
-push to `main` and uploads the zip as a workflow artifact. Pushing a tag `v1.1.0` (etc.) also
-attaches it to a GitHub release:
+push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.1.0` (etc.) also
+attaches the vector zip to a GitHub release:
 
 ```sh
 git tag v1.1.0 && git push origin v1.1.0
@@ -356,19 +411,28 @@ The code is one library with everything both versions share, plus one small exec
 src/Shared/   AsteroidsShared (static library): the game, its rules, sounds, controls, high scores,
               settings, the application loop, HUD, title screen and menus
 src/Vector/   Asteroids: draws the world with lines
-src/Pixel/    AsteroidsPixel: draws the world with sprites
+src/Rogue/    AsteroidsRogue (static library): the roguelike's rules (RogueGame, upgrades, runs,
+              hangar progress)
+src/Pixel/    AsteroidsPixel: runs the roguelike, draws it with sprites
 assets/pixel/ the pixel sprites (atlas.png + atlas.json, and the single images for editing)
 assets/icon/  the generated icon (icon.ico for the .exe, icon.png)
 packaging/    README.txt template for the zip, Windows version resource (Game.rc.in)
 cmake/        Packaging.cmake: what goes into the release zip
 tools/IconGen writes assets/icon/ (the UpdateIcon target)
+tools/PixelSprites  the scripts that made the roguelike's sprites
 ```
 
 | File | What it does |
 |---|---|
 | `src/Shared/AsteroidsApp.h/.cpp` | The shared `Emerald::Application`: command line options, binds the controls as input actions, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window in `OnRender2D` and calls the version's `DrawWorld` + `DrawHud`; plays the game's sound events and the thrust and saucer loops; loads and saves the high scores |
 | `src/Vector/Main.cpp` | `VectorAsteroids`: `DrawWorld` with outlines (rocks, ship + flame, saucer, bullets, debris), `highscores.txt` |
-| `src/Pixel/Main.cpp` | `PixelAsteroids`: loads the atlas in `OnLoadAssets`; `DrawWorld` with sprites scaled to the collision radii (see `Look::` constants), a procedural starfield, pixel bullets and sparks; ship sprites as life icons; `highscores_pixel.txt` |
+| `src/Pixel/Main.cpp` | `PixelRogue`: loads the atlas and `meta.txt` in `OnLoadAssets` (saves it in `OnGameStepped`); `DrawWorld` with sprites scaled to the collision radii (see `Look::` constants), a procedural starfield, pixel bullets; upgrade/ship icons on the HUD, picker and hangar |
+| `src/Shared/GameMode.h` | The interface `AsteroidsApp` runs (`Game` or `RogueGame`), with `GameInput` and the sound events |
+| `src/Rogue/RogueGame.h/.cpp` | The roguelike: states (title, hangar, playing, upgrade picker, initials, results), rock kinds, shots (piercing, homing), saucers with hit points, the three bosses, scrap, blasts, and its HUD and screens |
+| `src/Rogue/Upgrades.h/.cpp` | Upgrades and ships (data), `UpgradeSet` (stacking), `ComputeStats`, seeded `DrawOffers` |
+| `src/Rogue/Run.h/.cpp` | `Stage` (sector/wave), `NextStage`, rock kinds' health, `PlanWave` (rocks and saucers by depth) |
+| `src/Rogue/Meta.h/.cpp` | `MetaProgress` (scrap, ships, pool, runs) and `meta.txt`; `ScrapForRun` |
+| `src/Shared/ScoreScreens.h/.cpp` | Initials entry and the high score table, used by both games |
 | `src/Shared/ParticleEffects.h/.cpp` | The particle effects (one `ParticleEmitterConfig` each) spawned from the game's sound events, and the exhaust |
 | `src/Shared/Screens.h/.cpp` | The title screen: glowing logo, page cycling, the controls table |
 | `src/Shared/Menu.h/.cpp` | A vertical vector-font menu (selection, wrap-around, values on the right) used by the title, pause and options menus |
@@ -388,22 +452,24 @@ tools/IconGen writes assets/icon/ (the UpdateIcon target)
 | `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |
 | `tests/GameLogicTests.cpp` | ctest for the high score table, the saucer's aim and which events make particles |
 | `tests/MenuSettingsTests.cpp` | ctest for settings.txt, menu navigation and the title screen pages |
+| `tests/RogueTests.cpp` | ctest for the roguelike: upgrade stacking and stats, seeded offers and wave plans, a whole run (and permadeath), `meta.txt` and high score notes |
 
-The game logic (`Game`) never touches the window or GPU: it gets a `GameInput` per fixed step, and
+The game logic (`Game`, `RogueGame`) never touches the window or GPU: it gets a `GameInput` per fixed step, and
 the executables draw its state into a `Renderer2D` that `AsteroidsApp` has already set up with the
 right projection (the particles are drawn by `AsteroidsApp` right after `DrawWorld`; a version only
 picks their look with `GetParticleDrawOptions`). The playfield is always 1280 × 720 logical pixels, scaled uniformly to the window
 with black bars (and clipped) when the aspect ratio differs, so resizing the window never changes the
-gameplay. Collisions use the same radii in both versions; the pixel version only scales its sprites
-to match them, and picks between the two looks of each rock size by its spin direction, so it uses
-no extra random numbers (the same `--seed` gives the same rocks in both).
+gameplay. The pixel version scales its sprites to the collision radii, and picks between the two
+looks of each plain rock size by its spin direction, so drawing uses no random numbers.
 
 ### The pixel sprites
 
-`assets/pixel/` holds the sprites (generated for this project, AI-assisted): `ship` (38 × 80,
+`assets/pixel/` holds the sprites (the originals AI-assisted, the roguelike's made in code in the
+same style by `tools/PixelSprites/rogue.py`): `ship` (38 × 80,
 pointing up, with the engine flames in its bottom rows, which are cropped off while not
 thrusting), `enemy` (the saucer, 80 × 46) and two looks for each rock size
-(`asteroid_large_1/2`, `asteroid_medium_1/2`, `asteroid_small_1/2`). The game loads only
+(`asteroid_large_1/2`, `asteroid_medium_1/2`, `asteroid_small_1/2`), plus the rock kinds, three more
+ships, the bosses, upgrade icons, scrap and the missile. The game loads only
 `atlas.png` + `atlas.json` (name → x, y, w, h); see `assets/pixel/README.md`. The build copies the
 whole `assets/` folder next to the executables.
 
