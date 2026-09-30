@@ -136,6 +136,27 @@ endforeach()
 set_target_properties(Asteroids PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}")
 set_target_properties(AsteroidsPixel PROPERTIES OUTPUT_NAME "${GAME_FILE_NAME}Pixel")
 
+if(WIN32)
+    # Icon and version details of the .exe (Explorer, taskbar, file properties).
+    enable_language(RC)
+    set(GAME_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon/icon.ico")
+    configure_file(packaging/windows/Game.rc.in "${CMAKE_BINARY_DIR}/generated/Game.rc" @ONLY)
+    target_sources(Asteroids PRIVATE "${CMAKE_BINARY_DIR}/generated/Game.rc")
+    set_source_files_properties("${CMAKE_BINARY_DIR}/generated/Game.rc" PROPERTIES
+        OBJECT_DEPENDS "${GAME_ICON_FILE}")
+endif()
+
+# Regenerates assets/icon/icon.ico and icon.png from src/Shared/Icon.cpp (they are committed, so
+# only needed after changing the icon):  cmake --build --preset release --target UpdateIcon
+add_executable(AsteroidsIconGen tools/IconGen/Main.cpp)
+target_link_libraries(AsteroidsIconGen PRIVATE AsteroidsShared)
+emerald_set_warnings(AsteroidsIconGen)
+set_target_properties(AsteroidsIconGen PROPERTIES EXCLUDE_FROM_ALL ON)
+add_custom_target(UpdateIcon
+    COMMAND AsteroidsIconGen "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon"
+    COMMENT "Writing assets/icon/icon.ico and icon.png"
+    VERBATIM)
+
 # Make Asteroids the default target to run/debug in Visual Studio.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Asteroids)
 
