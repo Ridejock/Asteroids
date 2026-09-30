@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -60,15 +61,49 @@ struct GameSound {
     f32 Pan = 0.0f; // -1 (left edge) .. +1 (right edge), from where it happened
 };
 
-// All of the game's state and rules. It knows nothing about windows or GPUs: Main.cpp feeds it
-// input at a fixed rate (Update) and gives it a Renderer2D already set up for playfield
-// coordinates (Draw).
+// A short-lived bit of an explosion: a dot, or a spinning line when Length > 0.
+struct Particle {
+    Vec2 Position;
+    Vec2 Velocity;
+    f32 Angle = 0.0f;
+    f32 Spin = 0.0f;
+    f32 Length = 0.0f;
+    f32 TimeLeft = 0.0f;
+    f32 Lifetime = 1.0f;
+};
+
+// All of the game's state and rules. It knows nothing about windows or GPUs: AsteroidsApp feeds
+// it input at a fixed rate (Update). How the world looks is up to the executable (vector lines or
+// pixel sprites), which reads the state through the getters below; the HUD (vector font) is
+// shared and drawn by DrawHud.
 class Game {
 public:
     explicit Game(u32 seed);
 
     void Update(const GameInput& input, f32 dt);
-    void Draw(Emerald::Renderer2D& r) const;
+    // Score, lives, high score, banners, initials entry and the high score table, in playfield
+    // coordinates. `drawLives` = false leaves the remaining-ships icons to the caller.
+    void DrawHud(Emerald::Renderer2D& r, bool drawLives = true) const;
+    // Where the HUD shows the i-th remaining ship (center, playfield coordinates).
+    [[nodiscard]] static Vec2 GetLifeIconPosition(u32 index)
+    {
+        return {52.0f + 26.0f * static_cast<f32>(index), 84.0f};
+    }
+
+    // --- What there is to draw ---
+    [[nodiscard]] const Ship& GetShip() const { return m_Ship; }
+    // False while the ship is exploded/respawning, and during the invulnerability blink's off
+    // phases.
+    [[nodiscard]] bool IsShipVisible() const;
+    // Flickering flame length while thrusting (pixels, 0 = no flame this step).
+    [[nodiscard]] f32 GetFlameLength() const { return m_FlameLength; }
+    [[nodiscard]] std::span<const Asteroid> GetAsteroids() const { return m_Asteroids; }
+    [[nodiscard]] std::span<const Bullet> GetBullets() const { return m_Bullets; }
+    [[nodiscard]] std::span<const Bullet> GetSaucerBullets() const { return m_SaucerBullets; }
+    [[nodiscard]] const std::optional<Saucer>& GetSaucer() const { return m_Saucer; }
+    [[nodiscard]] std::span<const Particle> GetParticles() const { return m_Particles; }
+    // Seconds since the game object was created (for blinking and other animation).
+    [[nodiscard]] f32 GetTime() const { return m_Time; }
 
     [[nodiscard]] u32 GetScore() const { return m_Score; }
     [[nodiscard]] u32 GetLives() const { return m_Lives; }
@@ -111,17 +146,6 @@ public:
 private:
     enum class State { Playing, EnterInitials, GameOver };
 
-    // A short-lived bit of an explosion: a dot, or a spinning line when Length > 0.
-    struct Particle {
-        Vec2 Position;
-        Vec2 Velocity;
-        f32 Angle = 0.0f;
-        f32 Spin = 0.0f;
-        f32 Length = 0.0f;
-        f32 TimeLeft = 0.0f;
-        f32 Lifetime = 1.0f;
-    };
-
     void NewGame();
     void StartWave();
     void UpdateShip(const GameInput& input, f32 dt);
@@ -140,8 +164,7 @@ private:
     void SpawnDebris(const Vec2& position, const Vec2& velocity, u32 lines);
     [[nodiscard]] f32 NextSaucerDelay();
     void SpawnExplosion(const Vec2& position, u32 dots, f32 speed);
-    [[nodiscard]] bool IsShipVisible() const;
-    void DrawHud(Emerald::Renderer2D& r) const;
+
     void DrawInitialsEntry(Emerald::Renderer2D& r) const;
     void DrawHighScoreTable(Emerald::Renderer2D& r, f32 top) const;
     void PlaySound(SoundEvent event, const Vec2& position);

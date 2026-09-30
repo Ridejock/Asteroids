@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(Asteroids
     VERSION 0.1.0
-    DESCRIPTION "Classic vector Asteroids built with the Emerald engine"
+    DESCRIPTION "Classic Asteroids (vector and pixel-art versions) built with the Emerald engine"
     LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-# The game executable and its compiled shaders/ folder end up in build/<preset>/bin.
+# The game executables, their compiled shaders/ and assets/ end up in build/<preset>/bin.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # ---------------------------------------------------------------------------
@@ -39,56 +39,66 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        017ed104fd30d137b7fb86f90f5c81b562840b0b
+    GIT_TAG        00a78ecab243ddbd7c0ec87962e335e8ad062327
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
 
 # ---------------------------------------------------------------------------
-# The game
+# The game: one library with everything shared (rules, collisions, scoring, high scores, sounds,
+# controls, the app loop and HUD), and a small executable that draws the world:
+#   Asteroids       vector lines, like the arcade original (src/Vector)
 # ---------------------------------------------------------------------------
-add_executable(Asteroids
-    src/Main.cpp
-    src/Game.cpp
-    src/Game.h
-    src/Ship.cpp
-    src/Ship.h
-    src/Asteroid.cpp
-    src/Asteroid.h
-    src/Bullet.h
-    src/HighScores.cpp
-    src/HighScores.h
-    src/Saucer.cpp
-    src/Saucer.h
-    src/VectorFont.cpp
-    src/VectorFont.h
-    src/Playfield.h
-    src/Random.h
-    src/Sounds.cpp
-    src/Sounds.h
+add_library(AsteroidsShared STATIC
+    src/Shared/AsteroidsApp.cpp
+    src/Shared/AsteroidsApp.h
+    src/Shared/Game.cpp
+    src/Shared/Game.h
+    src/Shared/Ship.cpp
+    src/Shared/Ship.h
+    src/Shared/Asteroid.cpp
+    src/Shared/Asteroid.h
+    src/Shared/Bullet.h
+    src/Shared/HighScores.cpp
+    src/Shared/HighScores.h
+    src/Shared/Saucer.cpp
+    src/Shared/Saucer.h
+    src/Shared/VectorFont.cpp
+    src/Shared/VectorFont.h
+    src/Shared/Playfield.h
+    src/Shared/Random.h
+    src/Shared/Sounds.cpp
+    src/Shared/Sounds.h
 )
-target_link_libraries(Asteroids PRIVATE Emerald::Emerald)
+target_include_directories(AsteroidsShared PUBLIC src/Shared)
+target_link_libraries(AsteroidsShared PUBLIC Emerald::Emerald)
+emerald_set_warnings(AsteroidsShared) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
 
-# The game has no shaders of its own; this compiles the engine's (Renderer2D) into bin/shaders/
-# and tells the code which formats exist (EMERALD_SHADER_FORMATS).
-emerald_add_shaders(Asteroids)
+add_executable(Asteroids src/Vector/Main.cpp)
 
-emerald_set_warnings(Asteroids) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
+# assets/ (the pixel sprites, and the optional player-supplied sounds in assets/sounds, which are
+# not in git) is copied next to the executables. A custom target instead of a POST_BUILD step, so
+# files added later are copied on the next build even when nothing needed relinking. Both
+# executables share one folder (bin/, or bin/<config>/ in Visual Studio), so one copy serves both.
+add_custom_target(AsteroidsAssets
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Asteroids>/assets"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:Asteroids>/assets"
+    COMMENT "Copying assets/ next to the executables"
+    VERBATIM
+)
+
+foreach(game Asteroids)
+    target_link_libraries(${game} PRIVATE AsteroidsShared)
+    # The games have no shaders of their own; this compiles the engine's (Renderer2D) into
+    # bin/shaders/ and tells the code which formats exist (EMERALD_SHADER_FORMATS).
+    emerald_add_shaders(${game})
+    emerald_set_warnings(${game})
+    add_dependencies(${game} AsteroidsAssets)
+endforeach()
 
 # Make Asteroids the default target to run/debug in Visual Studio.
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Asteroids)
-
-# Optional sound overrides: copies assets/sounds/ (player-supplied files, not in git) next to the
-# executable. A custom target instead of a POST_BUILD step, so files added later are copied on the
-# next build even when the game itself did not need relinking.
-add_custom_target(AsteroidsAssets
-    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Asteroids>/assets/sounds"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/assets/sounds" "$<TARGET_FILE_DIR:Asteroids>/assets/sounds"
-    COMMENT "Copying assets/sounds next to the executable"
-    VERBATIM
-)
-add_dependencies(Asteroids AsteroidsAssets)
 
 # ---------------------------------------------------------------------------
 # Tests (ctest): the sound override loader (with generated files), and the pure game logic
@@ -97,12 +107,10 @@ add_dependencies(Asteroids AsteroidsAssets)
 option(ASTEROIDS_BUILD_TESTS "Build the Asteroids tests" ON)
 if(ASTEROIDS_BUILD_TESTS)
     enable_testing()
-    add_executable(AsteroidsTests tests/SoundOverrideTests.cpp tests/Check.h src/Sounds.cpp)
-    add_executable(AsteroidsLogicTests tests/GameLogicTests.cpp tests/Check.h
-                   src/HighScores.cpp src/Saucer.cpp)
+    add_executable(AsteroidsTests tests/SoundOverrideTests.cpp tests/Check.h)
+    add_executable(AsteroidsLogicTests tests/GameLogicTests.cpp tests/Check.h)
     foreach(test_target AsteroidsTests AsteroidsLogicTests)
-        target_include_directories(${test_target} PRIVATE src)
-        target_link_libraries(${test_target} PRIVATE Emerald::Emerald)
+        target_link_libraries(${test_target} PRIVATE AsteroidsShared)
         emerald_set_warnings(${test_target})
     endforeach()
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)

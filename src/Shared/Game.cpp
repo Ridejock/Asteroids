@@ -46,11 +46,7 @@ u32 MassOf(AsteroidSize size)
     }
 }
 
-const Vec4 kShipColor{0.95f, 0.97f, 1.0f, 1.0f};
-const Vec4 kAsteroidColor{0.78f, 0.83f, 0.9f, 1.0f};
-const Vec4 kBulletColor{1.0f, 1.0f, 1.0f, 1.0f};
 const Vec4 kTextColor{0.95f, 0.97f, 1.0f, 1.0f};
-const Vec4 kSaucerColor{0.95f, 0.97f, 1.0f, 1.0f};
 const Vec4 kDimTextColor{0.95f, 0.97f, 1.0f, 0.35f};
 
 // Right-aligns `text` in `width` characters (the font is monospaced, so columns line up).
@@ -565,44 +561,7 @@ bool Game::IsShipVisible() const
     return m_InvulnerableTimer <= 0.0f || std::fmod(m_Time * 8.0f, 2.0f) < 1.0f;
 }
 
-void Game::Draw(Emerald::Renderer2D& r) const
-{
-    // Once the game is over the rocks keep drifting, dimmed so the text stays readable.
-    Vec4 asteroidColor = kAsteroidColor;
-    if (m_State != State::Playing)
-        asteroidColor.w = 0.35f;
-    for (const Asteroid& asteroid : m_Asteroids) {
-        ForEachWrappedCopy(asteroid.Position, asteroid.Radius * 1.2f,
-                           [&](const Vec2& p) { asteroid.Draw(r, p, asteroidColor); });
-    }
-
-    for (const Bullet& bullet : m_Bullets)
-        r.DrawCircle(bullet.Position, 1.5f, kBulletColor, 4);
-    for (const Bullet& bullet : m_SaucerBullets)
-        r.DrawCircle(bullet.Position, 1.5f, kBulletColor, 4);
-    if (m_Saucer)
-        m_Saucer->Draw(r, kSaucerColor);
-
-    for (const Particle& p : m_Particles) {
-        const f32 fade = p.TimeLeft / p.Lifetime; // 1 -> 0
-        const Vec4 color{1.0f, 1.0f, 1.0f, fade};
-        if (p.Length > 0.0f) {
-            const Vec2 half = Vec2(std::cos(p.Angle), std::sin(p.Angle)) * (0.5f * p.Length);
-            r.DrawLine(p.Position - half, p.Position + half, color);
-        } else {
-            r.DrawCircle(p.Position, 1.0f, color, 4);
-        }
-    }
-
-    if (IsShipVisible()) {
-        ForEachWrappedCopy(m_Ship.Position, 20.0f,
-                           [&](const Vec2& p) { m_Ship.Draw(r, p, kShipColor, m_FlameLength); });
-    }
-
-    DrawHud(r);
-}
-
-void Game::DrawHud(Emerald::Renderer2D& r) const
+void Game::DrawHud(Emerald::Renderer2D& r, bool drawLives) const
 {
     // Score in the top-left corner (at least two digits, like the arcade's "00").
     const std::string score =
@@ -610,10 +569,9 @@ void Game::DrawHud(Emerald::Renderer2D& r) const
     VectorFont::DrawText(r, score, {40.0f, 24.0f}, 30.0f, kTextColor);
 
     // Remaining ships below it, pointing up.
-    for (u32 i = 0; i < m_Lives; ++i) {
-        const Emerald::Transform2D icon{.Position = {52.0f + 26.0f * static_cast<f32>(i), 84.0f},
-                                        .Rotation = -Emerald::HalfPi,
-                                        .Scale = Vec2(0.85f)};
+    for (u32 i = 0; drawLives && i < m_Lives; ++i) {
+        const Emerald::Transform2D icon{
+            .Position = GetLifeIconPosition(i), .Rotation = -Emerald::HalfPi, .Scale = Vec2(0.85f)};
         DrawShipShape(r, icon, kTextColor);
     }
 
