@@ -436,7 +436,11 @@ bool RogueGame::OpenDebugScreen(std::string_view name)
     if (name == "hangar") {
         OpenTitleExtra(0);
     } else if (name == "upgrades") {
-        withUpgrades(Stage{1, 2}, 2);
+        withUpgrades(Stage{1, 1}, 2);
+        m_Stage = {1, 2}; // as after clearing wave 1
+        m_Rocks.clear();
+        m_Enemies.clear();
+        m_BannerTimer = 0.0f;
         OfferUpgrades();
     } else if (name.size() == 5 && name.starts_with("boss") && name[4] >= '1' && name[4] <= '3') {
         withUpgrades(Stage{static_cast<u32>(name[4] - '0'), kWavesPerSector + 1}, 5);
