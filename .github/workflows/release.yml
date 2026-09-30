@@ -1,7 +1,7 @@
 # Builds the Windows release zips on every push to main (and on pull requests) and uploads them
 # as workflow artifacts: the vector game (RockBlaster-...) and the pixel roguelike
-# (RockBlasterRogue-...). Pushing a tag like v1.0.0 also attaches the vector game's zip to a
-# GitHub release of that tag (the roguelike is published separately).
+# (RockBlasterRogue-...). Pushing a tag like v1.2.0 also attaches both zips to the GitHub release
+# of that tag (created if it does not exist yet).
 name: Windows release
 
 on:
@@ -98,4 +98,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.zip.outputs.vector_path }}
+          files: |
+            ${{ steps.zip.outputs.vector_path }}
+            ${{ steps.zip.outputs.pixel_path }}
+          fail_on_unmatched_files: true
