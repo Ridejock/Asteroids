@@ -355,8 +355,8 @@ Each game has its own zip for 64-bit Windows (and its own itch.io page):
 cmake --preset release
 cmake --build --preset release
 cmake --build --preset release --target package
-# -> build\release\RockBlaster-1.1.0-windows-x64.zip
-#    build\release\RockBlasterRogue-1.1.0-windows-x64.zip
+# -> build\release\RockBlaster-1.2.0-windows-x64.zip
+#    build\release\RockBlasterRogue-1.2.0-windows-x64.zip
 ```
 
 The roguelike's zip has `RockBlasterRogue.exe`, the shaders, `assets\pixel\atlas.png/json`,
@@ -373,18 +373,18 @@ the same files unzipped. The version is `project(... VERSION ...)` in `CMakeList
 changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 **GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
-push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.1.0` (etc.) also
-attaches the vector zip to a GitHub release:
+push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.2.0` (etc.) also
+attaches both zips to the GitHub release of that tag (creating it if needed):
 
 ```sh
-git tag v1.1.0 && git push origin v1.1.0
+git tag v1.2.0 && git push origin v1.2.0
 ```
 
 **Uploading to itch.io** with [butler](https://itch.io/docs/butler/) (after creating the game page
 on itch.io; `butler login` once):
 
 ```sh
-butler push RockBlaster-1.1.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.1.0
+butler push RockBlaster-1.2.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.2.0
 ```
 
 The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship

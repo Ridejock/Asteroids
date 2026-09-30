@@ -436,7 +436,7 @@ void AsteroidsApp::OnRender2D(Emerald::Renderer2D& r)
         TitleScreen::Draw(
             r, m_Edition, *m_Game,
             TitleScreen::PageAt(m_TitleTime, !m_Game->GetHighScores().GetEntries().empty()),
-            m_Prompts.Start, m_PadLabels, m_TitleTime);
+            m_Prompts.Start, m_PadLabels, HasCrtOption(), m_TitleTime);
     DrawOverlay(r);
     // Outline the playfield when there are bars, so the wrap-around edges are visible.
     if (offset.x >= 1.0f || offset.y >= 1.0f)
@@ -898,7 +898,7 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
         break;
     }
     case Overlay::Controls:
-        DrawControls(r, 190.0f, m_PadLabels);
+        DrawControls(r, 190.0f, m_PadLabels, HasCrtOption());
         Text::DrawCentered(r, "ENTER / ESC: BACK", kPlayfieldCenter.x, 560.0f, 16.0f, kMenuHint);
         break;
     }

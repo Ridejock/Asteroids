@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iterator>
 #include <utility>
+#include <vector>
 
 #include "GameInfo.h"
 #include "GameMode.h"
@@ -81,7 +82,7 @@ void DrawCover(Emerald::Renderer2D& r, const GameInfo::Edition& edition, f32 tim
 }
 
 void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMode& game, Page page,
-          std::string_view startPrompt, const PadLabels& pad, f32 time)
+          std::string_view startPrompt, const PadLabels& pad, bool crtKey, f32 time)
 {
     const f32 centerX = kPlayfieldCenter.x;
     DrawLogo(r, edition.Title, 190.0f, 980.0f, time);
@@ -97,7 +98,7 @@ void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMo
         game.DrawHighScoreTable(r, 300.0f);
         break;
     case Page::Controls:
-        DrawControls(r, 300.0f, pad);
+        DrawControls(r, 300.0f, pad, crtKey);
         break;
     }
 
@@ -110,7 +111,7 @@ void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMo
 
 } // namespace TitleScreen
 
-void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad)
+void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad, bool crtKey)
 {
     struct Row {
         const char* Action;
@@ -118,20 +119,22 @@ void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad)
         std::string Pad;
     };
     const bool hasPad = !pad.Fire.empty();
-    const Row rows[] = {
+    std::vector<Row> rows = {
         {"ROTATE", "A D / LEFT RIGHT", "LEFT STICK"},
         {"THRUST", "W / UP", pad.Thrust},
         {"FIRE", "SPACE", pad.Fire},
         {"HYPERSPACE", "SHIFT", pad.Hyperspace},
         {"PAUSE", "ESC / P", pad.Pause},
         {"FULLSCREEN", "F11 / ALT+ENTER", ""},
-        {"MUTE", "M", pad.Mute},
     };
+    if (crtKey)
+        rows.push_back({"CRT EFFECT", "F9", ""});
+    rows.push_back({"MUTE", "M", pad.Mute});
 
     const f32 centerX = kPlayfieldCenter.x;
     Text::DrawCentered(r, "CONTROLS", centerX, top, 24.0f, kText);
     // Fixed-width columns (monospaced font), centered as a block.
-    for (usize i = 0; i < std::size(rows); ++i) {
+    for (usize i = 0; i < rows.size(); ++i) {
         std::string line = PadRight(rows[i].Action, 12) + PadRight(rows[i].Keys, 16);
         line += hasPad ? PadRight(rows[i].Pad, 10) : std::string();
         Text::DrawCentered(r, line, centerX, top + 50.0f + 34.0f * static_cast<f32>(i), 18.0f,

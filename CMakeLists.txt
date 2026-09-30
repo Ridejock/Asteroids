@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.24)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 project(Asteroids
-    VERSION 1.1.0
+    VERSION 1.2.0
     DESCRIPTION "A vector arcade shooter (and a pixel-art variant) built with the Emerald engine"
     LANGUAGES C CXX)
 

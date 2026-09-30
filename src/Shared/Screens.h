@@ -43,14 +43,14 @@ void DrawLogo(Emerald::Renderer2D& r, std::string_view title, f32 centerY, f32 m
 void DrawCover(Emerald::Renderer2D& r, const GameInfo::Edition& edition, f32 time);
 
 // The whole overlay: logo, the current page, credits and version. `startPrompt` is e.g.
-// "PRESS ENTER" or "PRESS START / ENTER".
+// "PRESS ENTER" or "PRESS START / ENTER". `crtKey`: list F9 (CRT effect) in the controls.
 void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMode& game, Page page,
-          std::string_view startPrompt, const PadLabels& pad, f32 time);
+          std::string_view startPrompt, const PadLabels& pad, bool crtKey, f32 time);
 
 } // namespace TitleScreen
 
 // The controls reference (title screen page, and the options menu's CONTROLS entry), with a
-// gamepad column when a pad is connected.
-void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad);
+// gamepad column when a pad is connected. `crtKey` adds the CRT effect's F9 row.
+void DrawControls(Emerald::Renderer2D& r, f32 top, const PadLabels& pad, bool crtKey);
 
 } // namespace Asteroids
