@@ -1,14 +1,38 @@
-# Asteroids
+# ROCK DRIFT (working title)
 
-A small, readable remake of the classic vector arcade game **Asteroids**, built with the
-[Emerald](https://github.com/Ridejock/Emerald) C++20 engine (SDL3 + SDL GPU). It comes in two
-versions that play exactly the same (same rules, sounds, controls and code, apart from drawing):
+A small, readable vector arcade shooter in the spirit of the 1970s/80s vector games: steer a ship
+through drifting rocks, shoot them into smaller pieces and dodge flying saucers. Built with the
+[Emerald](https://github.com/Ridejock/Emerald) C++20 engine (SDL3 + SDL GPU). The repository and
+the CMake targets are still called `Asteroids` (the code's working name); the game itself is
+published under its own title, set in one place (see [The game's name](#the-games-name)). It is an
+original work: its code, look and sounds are made from scratch, and it uses no assets of any
+other game.
 
-- **`Asteroids`**, the vector version: everything on screen (ship, rocks, bullets, explosions, even
-  the score digits and letters) is drawn with 1 px lines by Emerald's `Renderer2D`; there are no
-  textures or font files.
-- **`AsteroidsPixel`**, the pixel-art version: sprites from `assets/pixel/` (one texture atlas) over
-  a twinkling starfield, with small pixel bullets and sparks. The text keeps the vector font.
+It comes in two versions that play exactly the same (same rules, sounds, controls and code, apart
+from drawing):
+
+- **Vector** (target `Asteroids`, `RockDrift.exe`): everything on screen (ship, rocks, bullets,
+  explosions, the logo, even the score digits and letters) is drawn with lines by Emerald's
+  `Renderer2D`; there are no textures or font files. **This is the released game.**
+- **Pixel** (target `AsteroidsPixel`, `RockDriftPixel.exe`): sprites from `assets/pixel/` (one
+  texture atlas) over a twinkling starfield, with small pixel bullets and sparks. The text keeps
+  the vector font. Not part of the release.
+
+## The game's name
+
+"ROCK DRIFT" is a placeholder. The title exists in exactly one place, the CMake cache variable
+**`GAME_TITLE`** at the top of `CMakeLists.txt`:
+
+```sh
+cmake --preset release -DGAME_TITLE="NEW NAME"   # or change the default in CMakeLists.txt
+```
+
+It feeds the window title, the title screen logo, the `.exe` names (`GAME_FILE_NAME`, derived as
+PascalCase: "NEW NAME" → `NewName.exe`, `NewNamePixel.exe`; set it to override), the Windows
+version resource (file description, product name), the per-user folder for settings and high
+scores, the README in the package, and the zip's name. The code reads it from the generated
+`GameInfo.h` (`src/Shared/GameInfo.h.in`). Upper case looks best in the vector font (A–Z, 0–9 and
+a few symbols).
 
 ![Vector version](docs/screenshot.png)
 ![Pixel version](docs/screenshot-pixel.png)
@@ -21,12 +45,14 @@ versions that play exactly the same (same rules, sounds, controls and code, apar
 | Thrust | **W** or **↑** | **left stick up**, **right trigger** (RT / R2 / ZR) or **d-pad ↑** |
 | Fire (at most 4 shots on screen) | **Space** | **South** (A / Cross / B) or **right shoulder** (RB / R1 / R) |
 | Hyperspace: jump to a random spot (1 s cooldown) | **Shift** | **North** (Y / Triangle / X) |
-| Restart after *Game Over* | **Enter** | **Start** (Menu / Options / +) or **South** |
+| Start a game (title screen), new game after *Game Over* | **Enter** or **Space** | **Start** (Menu / Options / +) or **South** |
+| Pause menu / title menu | **Esc** or **P** | **Start** (Menu / Options / +) |
+| Fullscreen on / off | **F11** or **Alt+Enter** | – |
 | Initials: change letter (A–Z, space) | **W / S** or **↑ / ↓** (hold to repeat) | **d-pad ↑ / ↓** or **left stick up / down** |
 | Initials: next letter / done | **Enter** or **Space** | **South** (A / Cross / B) |
 | Initials: previous letter | **Backspace** | **East** (B / Circle / A) |
 | Mute / unmute sound | **M** | **Back** (View / Share / −) |
-| Quit | **Esc** | – |
+| Menus: choose / change / confirm / back | **↑ ↓** / **← →** / **Enter**, **Space** / **Esc**, **Backspace** | **d-pad** or **left stick** / **South** / **East** (B / Circle / A) |
 
 Gamepad buttons are bound by position, so South is the bottom face button on every pad: A on Xbox,
 Cross on PlayStation, B on a Switch Pro Controller (the game over screen shows the right name,
@@ -34,8 +60,36 @@ e.g. "PRESS OPTIONS / ENTER" or "CROSS / ENTER: NEXT"). Any connected pad works 
 rumbles briefly when your ship is destroyed. Stick deadzone: 20% (radial).
 
 The inputs are bound to named actions (`Rotate` axis, `Thrust`, `Fire`, `Hyperspace`, `Start`,
-`Mute`, `Quit`, and for menus `MenuUp`, `MenuDown`, `Confirm`, `Back`) in `AsteroidsApp::BindControls` in `src/Shared/AsteroidsApp.cpp` (both versions); change a binding there, or at runtime with
+`Pause`, `Mute`, and for menus `MenuUp`, `MenuDown`, `MenuLeft`, `MenuRight`, `Confirm`, `Back`,
+`MenuBack`) in `AsteroidsApp::BindControls` in `src/Shared/AsteroidsApp.cpp` (both versions); change a binding there, or at runtime with
 `GetInput().RebindAction(...)`.
+
+## Title screen, pause and options
+
+The game opens on the **title screen**: the name in large glowing vector letters over slowly
+drifting rocks, cycling every 7 s between the start prompt, the high score table (skipped while it
+is empty) and the controls. Start / Enter begins a game; Esc (or the pad's Start) opens a small
+menu (Start game, Options, Quit game). 20 s after a game over the game returns to the title by
+itself.
+
+During a game, **Esc / P / pad Start pauses** with a menu: *Resume*, *Options*, *Quit to title*,
+*Quit game*. The game also pauses by itself when its window loses focus (Alt+Tab).
+
+**Options:** master volume and effects volume (0–100 in steps of 10), fullscreen (borderless, on
+the current display), vsync, screen shake (a short jolt on explosions), and the controls
+reference. Every change applies at once and is saved to `settings.txt` in the per-user folder
+(see [High scores](#high-scores) for where that is), one `key = value` per line:
+
+```
+master_volume = 80
+sfx_volume = 100
+fullscreen = off
+vsync = on
+screen_shake = on
+```
+
+Unknown keys and bad values are ignored, so a hand-edited file cannot break the game. (Runs with
+`--frames` never write it and always start windowed.)
 
 ## Sound
 
@@ -52,23 +106,24 @@ no audio files.
 | Hyperspace | jump | noise whoosh rising in pitch |
 | Saucer siren | while a saucer is on screen | looping square-wave warble (vibrato): large saucer 330 Hz wobbling 4×/s, small saucer 760 Hz wobbling 8×/s; fades in, and out (150 ms) when the saucer is destroyed, flies off or the game ends |
 | Saucer shot | each saucer shot | thin pulse wave sweeping 1000 → 280 Hz |
-| Heartbeat | during a wave | the classic two alternating low thumps; 1 beat per second at the start of a wave, speeding up to 4 per second as the rocks are destroyed; restarts with each wave, silent between waves and on the game over screen |
+| Heartbeat | during a wave | two alternating low thumps; 1 beat per second at the start of a wave, speeding up to 4 per second as the rocks are destroyed; restarts with each wave, silent between waves and on the game over screen |
 
 Sounds are panned by where they happen on screen. **M** (or the pad's Back button) mutes; the
-debug-full build's ImGui panel has master and ambience volume sliders, a mute checkbox and the list
+options menu sets the master and effects volume; the debug-full build's ImGui panel has master and ambience volume sliders, a mute checkbox and the list
 of loaded overrides.
 
-### Your own sounds (optional)
+### Your own sounds (optional, local builds only)
 
 Any sound can be replaced by a file of your own, without changing code, and the repository never
-contains such files. Put `<name>.mp3` or `<name>.wav` into `assets/sounds/` in the source tree (the
+contains such files. **They are never part of the release package** (nothing from `assets/` is
+installed or zipped), so the published game only ever has its generated sounds. Put `<name>.mp3` or `<name>.wav` into `assets/sounds/` in the source tree (the
 build copies that folder next to the executable) or directly into `build/<preset>/bin/assets/sounds/`:
 
 `fire`, `thrust`, `bang_large`, `bang_medium`, `bang_small`, `ship_explode`, `extra_life`, `beat1`,
 `beat2`, `hyperspace`, `saucer_large`, `saucer_small` (both looped while the saucer is on screen),
 `saucer_fire`, plus two extras with no generated version:
 
-- `music` loops on the game over screen only (fades in over 1.5 s, out when a new game starts).
+- `music` loops on the title and game over screens only (fades in over 1.5 s, out when a new game starts).
 - `ambience` loops quietly (25%, adjustable in the debug panel) under the gameplay and the
   heartbeat; it fades in when a game starts and out on game over.
 
@@ -107,14 +162,17 @@ third letter the table is shown with your entry blinking, then the start prompt.
 shown small at the top of the screen while you play.
 
 The table is saved as a plain text file in your per-user folder (`Paths::GetPrefPath("Ridejock",
-"Asteroids")` from Emerald, via SDL). Each version keeps its own table: `highscores.txt` for
-`Asteroids`, `highscores_pixel.txt` for `AsteroidsPixel`, side by side in that folder:
+GAME_FILE_NAME)` from Emerald, via SDL), next to `settings.txt` and the `logs/` folder. Each
+version keeps its own table: `highscores.txt` for the vector version, `highscores_pixel.txt` for
+the pixel one. With the default name the folder is:
 
 | OS | Folder |
 |---|---|
-| Windows | `%APPDATA%\Ridejock\Asteroids\` (e.g. `C:\Users\you\AppData\Roaming\...`) |
-| Linux | `~/.local/share/Ridejock/Asteroids/` |
-| macOS | `~/Library/Application Support/Ridejock/Asteroids/` |
+| Windows | `%APPDATA%\Ridejock\RockDrift\` (e.g. `C:\Users\you\AppData\Roaming\...`) |
+| Linux | `~/.local/share/Ridejock/RockDrift/` |
+| macOS | `~/Library/Application Support/Ridejock/RockDrift/` |
+
+(Older builds used `Ridejock/Asteroids/`; move `highscores.txt` over to keep an old table.)
 
 The log shows the exact path at startup (`High scores file: ...`). Each line is initials, a space,
 and the score, e.g. `ABC 12340` (initials are always 3 characters and may contain spaces). A missing
@@ -142,7 +200,7 @@ built automatically.
    Release / Debug (ImGui debug overlay)) in the status bar.
 3. **Build** (F7), then **Run/Debug** the `Asteroids` or `AsteroidsPixel` target (pick it as the
    launch target in the status bar; Shift+F5 / Ctrl+F5). The executables are
-   `build\<preset>\bin\Asteroids.exe` and `AsteroidsPixel.exe`, sharing the compiled shaders in
+   `build\<preset>\bin\RockDrift.exe` and `RockDriftPixel.exe`, sharing the compiled shaders in
    `build\<preset>\bin\shaders\` and the copied `assets\`.
 
 From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
@@ -150,8 +208,8 @@ From a *Developer PowerShell / x64 Native Tools prompt for VS 2022* instead:
 ```powershell
 cmake --preset debug
 cmake --build --preset debug
-.\build\debug\bin\Asteroids.exe
-.\build\debug\bin\AsteroidsPixel.exe
+.\build\debug\bin\RockDrift.exe
+.\build\debug\bin\RockDriftPixel.exe
 ```
 
 ### Linux / macOS
@@ -159,14 +217,15 @@ cmake --build --preset debug
 ```sh
 cmake --preset debug
 cmake --build --preset debug
-./build/debug/bin/Asteroids
-./build/debug/bin/AsteroidsPixel
+./build/debug/bin/RockDrift
+./build/debug/bin/RockDriftPixel
 ```
 
 (On Linux, SDL3 needs the usual X11/Wayland development packages; see Emerald's README.)
 
-Tests (`ASTEROIDS_BUILD_TESTS`, on by default): `SoundOverrides` (the override loader) and
-`GameLogic` (high score table: insert, sort, top 10, parse/serialize; saucer aiming):
+Tests (`ASTEROIDS_BUILD_TESTS`, on by default): `SoundOverrides` (the override loader),
+`GameLogic` (high score table: insert, sort, top 10, parse/serialize; saucer aiming) and
+`MenusAndSettings` (settings.txt parsing/writing, menu navigation, title screen pages):
 
 ```sh
 ctest --test-dir build/debug --output-on-failure
@@ -177,7 +236,7 @@ ctest --test-dir build/debug --output-on-failure
 | Preset | Description |
 |---|---|
 | `debug` | Debug build |
-| `release` | Optimized build |
+| `release` | Optimized build; on Windows a GUI program (no console window) with the C++ runtime linked in (`/MT`): this is what gets packaged |
 | `debug-full` | Debug build with Emerald's Dear ImGui overlay (`EMERALD_USE_IMGUI=ON`): FPS, wave, score, line/sprite/draw call counts |
 
 ### Command line
@@ -185,18 +244,59 @@ ctest --test-dir build/debug --output-on-failure
 Both executables take the same options:
 
 ```sh
-Asteroids --frames 600                        # quit after 600 frames
-Asteroids --frames 600 --screenshot shot.png  # save the last frame as a PNG
-Asteroids --seed 42                           # repeatable asteroid layout
-Asteroids --saucer small                      # testing: a saucer (large|small) right away
-Asteroids --game-over 12345                   # testing: end at once with this score
+RockDrift --frames 600                        # quit after 600 frames
+RockDrift --frames 600 --screenshot shot.png  # save the last frame as a PNG
+RockDrift --seed 42                           # repeatable asteroid layout
+RockDrift --screen options                    # start on: title, scores, controls (title pages),
+                                              #   play, pause or options (screenshots)
+RockDrift --saucer small                      # testing: a game with a saucer (large|small)
+RockDrift --game-over 12345                   # testing: end at once with this score
 ```
 
 The debug-full build's ImGui panel also has *Large saucer*, *Small saucer* and *Game over* buttons.
 
-The log is written to `logs/Asteroids.log` (`logs/AsteroidsPixel.log` for the pixel version) next
-to the executable. If the pixel version cannot find its sprites (`assets/pixel/` next to the
+The log is written to `logs/RockDrift.log` (`logs/RockDriftPixel.log` for the pixel version) in
+the per-user folder (see [High scores](#high-scores)), so it works from a read-only install too. If the pixel version cannot find its sprites (`assets/pixel/` next to the
 executable) it logs an error and draws the objects' outlines instead.
+
+## Release (itch.io)
+
+The release is a zip of the vector version for 64-bit Windows:
+
+```powershell
+cmake --preset release
+cmake --build --preset release
+cmake --build --preset release --target package
+# -> build\release\RockDrift-1.0.0-windows-x64.zip
+```
+
+It contains `RockDrift.exe` (icon and version info embedded; static C++ runtime and SDL3, so it
+runs on a clean Windows 10/11 PC), the compiled `shaders\` folder, `README.txt` (controls, rules,
+credits, generated from `packaging/README.txt.in`), `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`
+(the licenses of Emerald, SDL3 with HIDAPI, spdlog + {fmt}, stb, nlohmann/json and dr_mp3, taken
+from the fetched sources at configure time). Nothing from `assets/` is packaged. The rules are in
+`cmake/Packaging.cmake`; `cmake --install build/release --component Game --prefix <dir>` gives
+the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`.
+
+**GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
+push to `main` and uploads the zip as a workflow artifact. Pushing a tag `v1.0.0` (etc.) also
+attaches it to a GitHub release:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+**Uploading to itch.io** with [butler](https://itch.io/docs/butler/) (after creating the game page
+on itch.io; `butler login` once):
+
+```sh
+butler push RockDrift-1.0.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.0.0
+```
+
+The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship
+outline with a glow); after changing it, regenerate the committed files with
+`cmake --build --preset release --target UpdateIcon`. The window icon is made at startup from the
+same code.
 
 ## Engine development
 
@@ -234,10 +334,14 @@ The code is one library with everything both versions share, plus one small exec
 
 ```
 src/Shared/   AsteroidsShared (static library): the game, its rules, sounds, controls, high scores,
-              the application loop and the HUD; draws nothing but the HUD itself
+              settings, the application loop, HUD, title screen and menus
 src/Vector/   Asteroids: draws the world with lines
 src/Pixel/    AsteroidsPixel: draws the world with sprites
 assets/pixel/ the pixel sprites (atlas.png + atlas.json, and the single images for editing)
+assets/icon/  the generated icon (icon.ico for the .exe, icon.png)
+packaging/    README.txt template for the zip, Windows version resource (Game.rc.in)
+cmake/        Packaging.cmake: what goes into the release zip
+tools/IconGen writes assets/icon/ (the UpdateIcon target)
 ```
 
 | File | What it does |
@@ -245,6 +349,11 @@ assets/pixel/ the pixel sprites (atlas.png + atlas.json, and the single images f
 | `src/Shared/AsteroidsApp.h/.cpp` | The shared `Emerald::Application`: command line options, binds the controls as input actions, reads them in `OnFixedUpdate` (120 Hz), fits the playfield into the window in `OnRender2D` and calls the version's `DrawWorld` + `DrawHud`; plays the game's sound events and the thrust and saucer loops; loads and saves the high scores |
 | `src/Vector/Main.cpp` | `VectorAsteroids`: `DrawWorld` with outlines (rocks, ship + flame, saucer, bullets, debris), `highscores.txt` |
 | `src/Pixel/Main.cpp` | `PixelAsteroids`: loads the atlas in `OnLoadAssets`; `DrawWorld` with sprites scaled to the collision radii (see `Look::` constants), a procedural starfield, pixel bullets and sparks; ship sprites as life icons; `highscores_pixel.txt` |
+| `src/Shared/Screens.h/.cpp` | The title screen: glowing logo, page cycling, the controls table |
+| `src/Shared/Menu.h/.cpp` | A vertical vector-font menu (selection, wrap-around, values on the right) used by the title, pause and options menus |
+| `src/Shared/Settings.h/.cpp` | The options and `settings.txt` |
+| `src/Shared/Icon.h/.cpp` | Draws the ship icon into an image (window icon, `.ico`) |
+| `src/Shared/GameInfo.h.in` | Title, file name, version: filled in by CMake from `GAME_TITLE` and the project version |
 | `src/Shared/Game.h/.cpp` | Game state and rules: waves, bullets, saucers, collisions, lives, score, explosions, HUD, initials entry and the high score screen, sound events and the heartbeat timing. Exposes read-only state (`GetShip`, `GetAsteroids`, `GetParticles`, ...) for the renderers |
 | `src/Shared/Saucer.h/.cpp` | The flying saucer: sizes, speeds, points, outline, and the aiming math |
 | `src/Shared/HighScores.h/.cpp` | The top-10 table: ordering, the text file format, loading and saving |
@@ -257,6 +366,7 @@ assets/pixel/ the pixel sprites (atlas.png + atlas.json, and the single images f
 | `src/Shared/Random.h` | Tiny `std::mt19937` helper |
 | `tests/SoundOverrideTests.cpp` | ctest for the override loader, with generated WAV files |
 | `tests/GameLogicTests.cpp` | ctest for the high score table and the saucer's aim |
+| `tests/MenuSettingsTests.cpp` | ctest for settings.txt, menu navigation and the title screen pages |
 
 The game logic (`Game`) never touches the window or GPU: it gets a `GameInput` per fixed step, and
 the executables draw its state into a `Renderer2D` that `AsteroidsApp` has already set up with the
