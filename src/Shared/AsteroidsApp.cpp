@@ -450,6 +450,8 @@ void AsteroidsApp::OnImGui()
     ImGui::SetNextWindowPos(ImVec2(10.0f, 130.0f), ImGuiCond_FirstUseEver);
     ImGui::Begin("Debug");
     ImGui::Text("FPS: %.0f", static_cast<f64>(ImGui::GetIO().Framerate));
+    const std::string gpu(GetRenderer().GetDriverName());
+    ImGui::Text("GPU: %s", gpu.c_str());
     ImGui::Text("Fixed update: %.0f Hz", static_cast<f64>(1.0f / GetFixedDeltaSeconds()));
     ImGui::Text("Wave %u, %zu asteroids", m_Game->GetWave(), m_Game->GetAsteroidCount());
     ImGui::Text("Score %u, ships lost %u%s", m_Game->GetScore(), m_Game->GetShipsLost(),

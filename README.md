@@ -335,7 +335,15 @@ RockBlaster --screen options                    # start on: title, scores, contr
 RockBlaster --saucer small                      # testing: a game with a saucer (large|small)
 RockBlaster --game-over 12345                   # testing: end at once with this score
 RockBlaster --crt on                            # CRT effect on/off for this run (not saved)
+RockBlaster --gpu vulkan                        # GPU backend: vulkan, d3d12, metal or auto
 ```
+
+`--gpu` (also `--gpu=d3d12`) picks the SDL GPU backend without recompiling; it is read by Emerald
+and wins over SDL's `SDL_GPU_DRIVER` environment variable, which still works on its own (e.g.
+`set SDL_GPU_DRIVER=direct3d12` before starting the game). An unknown value, or a backend that
+cannot start on this PC, is logged and the game falls back to the automatic choice, so it always
+launches. The backend in use is in the log (`GPU device created: backend '...'`) and, in
+debug-full builds, in the ImGui panel (`GPU: vulkan`).
 
 The roguelike also knows `--screen hangar`, `upgrades` (the picker), `boss1`..`boss3`,
 `sector1`..`sector3` and `results`; append `+god` (e.g. `boss2+god`) for an indestructible ship
