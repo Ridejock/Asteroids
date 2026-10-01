@@ -81,6 +81,9 @@ Options ParseOptions(i32 argc, char** argv)
         } else if (arg == "--crt") {
             options.Crt = value == "on";
             ++i;
+        } else if (arg == "--rock-bounce") {
+            options.RockBounce = value == "on";
+            ++i;
         }
     }
     return options;
@@ -211,6 +214,8 @@ void AsteroidsApp::OnStart()
     BuildOptionsMenu();
     if (m_Options.Crt)
         m_Settings.Crt = *m_Options.Crt; // not saved: automated runs never save (see SaveSettings)
+    if (m_Options.RockBounce)
+        m_Settings.RockBounce = *m_Options.RockBounce; // for this run only, like --crt
     ApplySettings();
 
     // A 1 x 1 white texture: tinted black and stretched, it darkens the game behind menus.
@@ -817,6 +822,9 @@ void AsteroidsApp::UpdateOptions(MenuAction action)
     case OptionItem::Crt:
         m_Settings.Crt = !m_Settings.Crt;
         break;
+    case OptionItem::RockBounce:
+        m_Settings.RockBounce = !m_Settings.RockBounce;
+        break;
     case OptionItem::Controls:
         if (action == MenuAction::Confirm)
             OpenOverlay(Overlay::Controls);
@@ -873,13 +881,16 @@ void AsteroidsApp::DrawOverlay(Emerald::Renderer2D& r)
             case OptionItem::Crt:
                 values.push_back(onOff(m_Settings.Crt));
                 break;
+            case OptionItem::RockBounce:
+                values.push_back(onOff(m_Settings.RockBounce));
+                break;
             case OptionItem::Controls:
             case OptionItem::Back:
                 values.emplace_back();
                 break;
             }
         }
-        // Laid out for 8 items above the hint line; each extra one (CRT EFFECT) moves it up a row.
+        // Laid out for 8 items above the hint line; each extra one moves it up a row.
         const f32 extraRows = static_cast<f32>(m_OptionItems.size()) - 8.0f;
         m_OptionsMenu.Draw(r, "OPTIONS", 130.0f - 46.0f * extraRows, values, m_MenuTime);
         Text::DrawCentered(r, "UP / DOWN: CHOOSE    LEFT / RIGHT: CHANGE    ESC: BACK",
@@ -899,6 +910,7 @@ void AsteroidsApp::ApplySettings()
 {
     GetAudio().SetMasterVolume(static_cast<f32>(m_Settings.MasterVolume) / 100.0f);
     m_Effects.SetEnabled(m_Settings.Particles);
+    m_Game->SetRockBounce(m_Settings.RockBounce);
     if (HasCrtOption() && IsCrtEnabled() != m_Settings.Crt && !SetCrtEnabled(m_Settings.Crt))
         EM_WARN("CRT effect unavailable; drawing without it");
     if (GetRenderer().IsVSync() != m_Settings.VSync)
@@ -933,14 +945,15 @@ void AsteroidsApp::BuildOptionsMenu()
                      OptionItem::VSync,        OptionItem::ScreenShake, OptionItem::Particles};
     if (HasCrtOption())
         m_OptionItems.push_back(OptionItem::Crt);
+    m_OptionItems.push_back(OptionItem::RockBounce);
     m_OptionItems.push_back(OptionItem::Controls);
     m_OptionItems.push_back(OptionItem::Back);
 
     std::vector<std::string> labels;
     for (const OptionItem item : m_OptionItems) {
-        constexpr const char* kLabels[] = {"MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN",
-                                           "VSYNC",         "SCREEN SHAKE",   "PARTICLES",
-                                           "CRT EFFECT",    "CONTROLS",       "BACK"};
+        constexpr const char* kLabels[] = {
+            "MASTER VOLUME", "EFFECTS VOLUME", "FULLSCREEN",  "VSYNC",    "SCREEN SHAKE",
+            "PARTICLES",     "CRT EFFECT",     "ROCK BOUNCE", "CONTROLS", "BACK"};
         labels.emplace_back(kLabels[static_cast<usize>(item)]);
     }
     m_OptionsMenu = Menu(std::move(labels));

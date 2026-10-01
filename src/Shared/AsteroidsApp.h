@@ -35,6 +35,7 @@ struct Options {
     std::optional<u32> GameOverScore;
     std::string Screen;
     std::optional<bool> Crt;
+    std::optional<bool> RockBounce;
 };
 
 [[nodiscard]] Options ParseOptions(i32 argc, char** argv);
@@ -106,7 +107,7 @@ private:
     // Screens drawn over the game; the last one gets the input. While any is open during a game,
     // the game is frozen (paused); on the title screen the rocks keep drifting behind them.
     enum class Overlay : u8 { TitleMenu, PauseMenu, Options, Controls };
-    // The options menu's items, in order (CRT EFFECT only where HasCrtOption).
+    // The options menu's items, in order (CRT EFFECT only where HasCrtOption; ROCK BOUNCE in both).
     enum class OptionItem : u8 {
         MasterVolume,
         SfxVolume,
@@ -115,6 +116,7 @@ private:
         ScreenShake,
         Particles,
         Crt,
+        RockBounce,
         Controls,
         Back
     };

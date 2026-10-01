@@ -131,6 +131,8 @@ public:
     virtual void ForceGameOver(u32 score) = 0;
     // A --screen name the mode handles itself (e.g. "hangar"); false if it doesn't know it.
     virtual bool OpenDebugScreen(std::string_view /*name*/) { return false; }
+    // The ROCK BOUNCE option: rocks bounce off one another (see RockBounce.h).
+    virtual void SetRockBounce(bool /*on*/) {}
 };
 
 } // namespace Asteroids

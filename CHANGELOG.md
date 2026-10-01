@@ -8,6 +8,16 @@
 - The letterboxed playfield and the screen shake now use Emerald's `Camera2D` (same picture;
   the shake is trauma based: smooth, frame-rate independent, gone within half a second).
   Emerald updated to `63307c9`.
+- **Rock bounce** (both games, *Options > ROCK BOUNCE*, saved as `rock_bounce` in
+  `settings.txt`, `--rock-bounce on|off` for one run):
+  - Rocks bounce off one another, with mass ~ area and a slightly inelastic impulse, also across
+    the screen edges. They are pushed apart so they never stick, and the fragments of a break
+    still fly apart.
+  - **Off by default in ROCK BLASTER** (the classic feel) and **on by default in ROCK BLASTER
+    ROGUE**.
+  - Scoring and particles are unchanged.
+- The circle collision checks now use Emerald's new collision module (`Emerald/Physics`), with
+  identical results, and rock bounce uses its spatial hash. Emerald updated to `b7f42c0`.
 
 ## 1.2.1 (2026-10-01)
 

@@ -633,6 +633,12 @@ void RogueGame::UpdateObjects(f32 dt)
         rock.Body.Update(dt);
         rock.Flash = Emerald::Max(rock.Flash - dt, 0.0f);
     }
+    if (m_RockBounce) {
+        m_BounceRocks.clear();
+        for (Rock& rock : m_Rocks)
+            m_BounceRocks.push_back(&rock.Body);
+        m_Bounce.Step(m_BounceRocks);
+    }
     UpdateShots(dt);
     for (usize i = 0; i < m_EnemyShots.size();) {
         EnemyShot& shot = m_EnemyShots[i];
@@ -1105,9 +1111,12 @@ void RogueGame::BreakRock(const Rock& rock, bool byPlayer)
     if (const std::optional<AsteroidSize> smaller = SmallerSize(body.Size)) {
         const bool splitter = rock.Kind == RockKind::Splitter;
         const RockKind kind = rock.Kind == RockKind::Explosive ? RockKind::Normal : rock.Kind;
+        const u32 family = NextRockFamily(m_RockFamily);
         for (i32 k = 0; k < (splitter ? 3 : 2); ++k) {
             Rock fragment = MakeRock(kind, *smaller, body.Position);
             fragment.Body.Velocity += body.Velocity * 0.5f;
+            fragment.Body.Family = family; // siblings fly apart instead of bouncing
+            fragment.Body.FamilyTime = RockBounce::kFamilyTime;
             if (splitter)
                 fragment.Body.Velocity *= 1.3f;
             m_NewRocks.push_back(fragment);

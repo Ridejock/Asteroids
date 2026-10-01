@@ -4,6 +4,7 @@
 
 #include <Emerald/Core/Defines.h>
 #include <Emerald/Math/Vec2.h>
+#include <Emerald/Physics/Collision.h>
 
 namespace Asteroids {
 
@@ -39,11 +40,12 @@ inline constexpr Vec2 kPlayfieldCenter = kPlayfieldSize * 0.5f;
     return d;
 }
 
-// Circle vs circle on the wrapping playfield.
+// Circle vs circle on the wrapping playfield: Emerald's test with `a` moved to the origin and `b`
+// to its nearest copy (touching does not count).
 [[nodiscard]] inline bool CirclesOverlap(const Vec2& a, f32 radiusA, const Vec2& b, f32 radiusB)
 {
-    const f32 r = radiusA + radiusB;
-    return Emerald::LengthSquared(WrappedDelta(a, b)) < r * r;
+    return Emerald::Overlaps(Emerald::Circle{{0.0f, 0.0f}, radiusA},
+                             Emerald::Circle{WrappedDelta(a, b), radiusB});
 }
 
 // Calls draw(position) once for an object, plus once more for every "ghost" copy on the

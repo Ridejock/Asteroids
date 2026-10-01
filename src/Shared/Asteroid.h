@@ -28,6 +28,10 @@ struct Asteroid {
     AsteroidSize Size = AsteroidSize::Large;
     f32 Radius = 0.0f;                     // for collisions
     std::array<Vec2, kPointCount> Outline; // model space, pixels around the center
+    // Rock bounce: fragments of one break share a family and ignore each other for FamilyTime
+    // seconds, so they fly apart instead of being pushed out of one another (0 = no family).
+    u32 Family = 0;
+    f32 FamilyTime = 0.0f;
 
     void Update(f32 dt);
     // Draws the outline at `position` (Position or one of its wrapped copies).

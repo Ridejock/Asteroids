@@ -1,14 +1,19 @@
-// Tests for the pure game logic: the high score table (ordering, top 10, text format) and the
-// saucer's aiming math. No window, GPU or audio needed.
+// Tests for the pure game logic: the high score table (ordering, top 10, text format), the
+// saucer's aiming math, the circle checks and rock bounce. No window, GPU or audio needed.
 
+#include <array>
 #include <cmath>
 #include <cstdio>
+#include <random>
+#include <span>
 #include <string>
+#include <vector>
 
 #include "Check.h"
 #include "HighScores.h"
 #include "ParticleEffects.h"
 #include "Playfield.h"
+#include "RockBounce.h"
 #include "Saucer.h"
 
 namespace {
@@ -150,6 +155,138 @@ void TestParticleEffects()
     Check(count() == 0, "and no new ones appear");
 }
 
+// The circle check as it was before it moved onto Emerald's Collision.h.
+bool OldCirclesOverlap(const Asteroids::Vec2& a, f32 radiusA, const Asteroids::Vec2& b, f32 radiusB)
+{
+    const f32 r = radiusA + radiusB;
+    return Emerald::LengthSquared(Asteroids::WrappedDelta(a, b)) < r * r;
+}
+
+void TestCirclesOverlapUnchanged()
+{
+    using Asteroids::CirclesOverlap;
+    using Asteroids::Vec2;
+    std::mt19937 rng(2026);
+    std::uniform_real_distribution<f32> x(-50.0f, 1330.0f), y(-50.0f, 770.0f), r(0.0f, 60.0f);
+    u32 mismatches = 0;
+    u32 hits = 0;
+    for (u32 i = 0; i < 200000; ++i) {
+        const Vec2 p{x(rng), y(rng)};
+        const Vec2 b{x(rng), y(rng)};
+        const f32 ra = r(rng);
+        const f32 rb = i % 3 == 0 ? 0.0f : r(rng); // bullets are points
+        const bool now = CirclesOverlap(p, ra, b, rb);
+        mismatches += now != OldCirclesOverlap(p, ra, b, rb) ? 1 : 0;
+        hits += now ? 1 : 0;
+    }
+    Check(mismatches == 0 && hits > 1000, "CirclesOverlap matches the old check on 200k samples");
+    // Exactly touching (no overlap), just overlapping, and both across the wrap edges.
+    const std::array<std::array<f32, 6>, 6> cases{{
+        {100.0f, 100.0f, 10.0f, 130.0f, 100.0f, 20.0f},
+        {100.0f, 100.0f, 10.0f, 129.9f, 100.0f, 20.0f},
+        {5.0f, 300.0f, 5.0f, 1275.0f, 300.0f, 5.0f},
+        {5.0f, 300.0f, 6.0f, 1275.0f, 300.0f, 5.0f},
+        {640.0f, 2.0f, 3.0f, 640.0f, 718.0f, 1.0f},
+        {640.0f, 2.0f, 0.0f, 640.0f, 2.0f, 0.0f},
+    }};
+    bool same = true;
+    for (const auto& c : cases)
+        same = same && CirclesOverlap({c[0], c[1]}, c[2], {c[3], c[4]}, c[5]) ==
+                           OldCirclesOverlap({c[0], c[1]}, c[2], {c[3], c[4]}, c[5]);
+    Check(same, "CirclesOverlap matches the old check when touching and across edges");
+    Check(!CirclesOverlap({100.0f, 100.0f}, 10.0f, {130.0f, 100.0f}, 20.0f) &&
+              CirclesOverlap({5.0f, 300.0f}, 6.0f, {1275.0f, 300.0f}, 5.0f),
+          "touching circles don't overlap; circles overlap across the wrap edge");
+}
+
+Asteroids::Asteroid MakeRock(Asteroids::Vec2 position, Asteroids::Vec2 velocity, f32 radius)
+{
+    Asteroids::Asteroid rock;
+    rock.Position = position;
+    rock.Velocity = velocity;
+    rock.Radius = radius;
+    return rock;
+}
+
+// Moves the rocks like the game does (120 Hz) with rock bounce, for `seconds`.
+void Simulate(std::span<Asteroids::Asteroid> rocks, f32 seconds)
+{
+    Asteroids::RockBounce bounce;
+    std::vector<Asteroids::Asteroid*> pointers;
+    for (Asteroids::Asteroid& rock : rocks)
+        pointers.push_back(&rock);
+    for (f32 t = 0.0f; t < seconds; t += 1.0f / 120.0f) {
+        for (Asteroids::Asteroid& rock : rocks)
+            rock.Update(1.0f / 120.0f);
+        bounce.Step(pointers);
+    }
+}
+
+void TestRockBounce()
+{
+    using Asteroids::Asteroid;
+    using Asteroids::Vec2;
+    // Head-on, equal size: they swap (most of) their velocities and end up apart.
+    std::array<Asteroid, 2> pair{MakeRock({500.0f, 300.0f}, {50.0f, 0.0f}, 24.0f),
+                                 MakeRock({600.0f, 300.0f}, {-50.0f, 0.0f}, 24.0f)};
+    Simulate(pair, 2.0f);
+    Check(pair[0].Velocity.x < -40.0f && pair[1].Velocity.x > 40.0f &&
+              Near(pair[0].Velocity.x + pair[1].Velocity.x, 0.0f),
+          "equal rocks bounce back head-on, momentum kept");
+    Check(!Asteroids::CirclesOverlap(pair[0].Position, 24.0f, pair[1].Position, 24.0f),
+          "and end up apart");
+
+    // A small rock hitting a big one at rest bounces off; the big one hardly moves.
+    std::array<Asteroid, 2> sizes{MakeRock({600.0f, 300.0f}, {0.0f, 0.0f}, 46.0f),
+                                  MakeRock({500.0f, 300.0f}, {100.0f, 0.0f}, 12.0f)};
+    Simulate(sizes, 1.5f);
+    Check(sizes[1].Velocity.x < -50.0f && sizes[0].Velocity.x > 0.0f && sizes[0].Velocity.x < 20.0f,
+          "mass ~ area: a small rock glances off a big one");
+
+    // Across the left/right edge.
+    std::array<Asteroid, 2> wrap{MakeRock({1260.0f, 360.0f}, {60.0f, 0.0f}, 24.0f),
+                                 MakeRock({20.0f, 360.0f}, {-60.0f, 0.0f}, 24.0f)};
+    Simulate(wrap, 1.5f);
+    Check(wrap[0].Velocity.x < 0.0f && wrap[1].Velocity.x > 0.0f,
+          "rocks bounce across the wrap edge");
+
+    // Overlapping but already moving apart: pushed apart, velocities left alone.
+    std::array<Asteroid, 2> apart{MakeRock({500.0f, 300.0f}, {-10.0f, 0.0f}, 24.0f),
+                                  MakeRock({520.0f, 300.0f}, {10.0f, 0.0f}, 24.0f)};
+    Simulate(apart, 0.5f);
+    Check(Near(apart[0].Velocity.x, -10.0f) && Near(apart[1].Velocity.x, 10.0f) &&
+              !Asteroids::CirclesOverlap(apart[0].Position, 24.0f, apart[1].Position, 24.0f),
+          "separating rocks get no impulse, only pushed apart");
+
+    // Fragments of one break start on the same spot: they ignore each other and fly apart.
+    std::array<Asteroid, 2> family{MakeRock({500.0f, 300.0f}, {-80.0f, 30.0f}, 24.0f),
+                                   MakeRock({500.0f, 300.0f}, {90.0f, -40.0f}, 24.0f)};
+    for (Asteroid& rock : family) {
+        rock.Family = 7;
+        rock.FamilyTime = Asteroids::RockBounce::kFamilyTime;
+    }
+    Simulate(family, 1.0f);
+    Check(family[0].Velocity == Vec2(-80.0f, 30.0f) && family[1].Velocity == Vec2(90.0f, -40.0f),
+          "fragments of one break fly apart untouched");
+    Check(family[0].FamilyTime == 0.0f, "the family time runs out");
+
+    // A crowd never ends up stuck inside each other.
+    std::vector<Asteroid> crowd;
+    std::mt19937 rng(3);
+    std::uniform_real_distribution<f32> px(0.0f, 1280.0f), py(0.0f, 720.0f), v(-120.0f, 120.0f);
+    for (u32 i = 0; i < 40; ++i)
+        crowd.push_back(MakeRock({px(rng), py(rng)}, {v(rng), v(rng)}, i % 3 == 0 ? 46.0f : 24.0f));
+    Simulate(crowd, 10.0f);
+    f32 worst = 0.0f;
+    for (usize i = 0; i < crowd.size(); ++i)
+        for (usize j = i + 1; j < crowd.size(); ++j) {
+            const f32 d =
+                Emerald::Length(Asteroids::WrappedDelta(crowd[i].Position, crowd[j].Position));
+            worst = Emerald::Max(worst, crowd[i].Radius + crowd[j].Radius - d);
+        }
+    Check(worst < 8.0f, "a crowd of rocks never stays deep inside each other");
+}
+
 } // namespace
 
 int main()
@@ -160,6 +297,8 @@ int main()
     TestSerializeAndParse();
     TestSaucerAim();
     TestParticleEffects();
+    TestCirclesOverlapUnchanged();
+    TestRockBounce();
     std::printf("%d failed\n", g_Failures);
     return g_Failures == 0 ? 0 : 1;
 }

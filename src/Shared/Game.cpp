@@ -221,6 +221,12 @@ void Game::UpdateObjects(f32 dt)
 {
     for (Asteroid& asteroid : m_Asteroids)
         asteroid.Update(dt);
+    if (m_RockBounce) {
+        m_BounceRocks.clear();
+        for (Asteroid& asteroid : m_Asteroids)
+            m_BounceRocks.push_back(&asteroid);
+        m_Bounce.Step(m_BounceRocks);
+    }
 
     // Bullets and particles expire; remove them by swapping with the last element (order does
     // not matter, and nothing has to shift).
@@ -325,9 +331,12 @@ void Game::BreakAsteroid(const Asteroid& asteroid, std::vector<Asteroid>& fragme
 {
     // Large -> 2 medium -> 2 small -> gone.
     if (const auto smaller = SmallerSize(asteroid.Size)) {
+        const u32 family = NextRockFamily(m_RockFamily);
         for (i32 k = 0; k < 2; ++k) {
             Asteroid fragment = MakeAsteroid(m_Random, *smaller, asteroid.Position);
             fragment.Velocity += asteroid.Velocity * 0.5f; // inherit some of the momentum
+            fragment.Family = family; // siblings fly apart instead of bouncing (rock bounce)
+            fragment.FamilyTime = RockBounce::kFamilyTime;
             fragments.push_back(fragment);
         }
     }

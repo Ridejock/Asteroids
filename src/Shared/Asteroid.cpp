@@ -99,6 +99,7 @@ void Asteroid::Update(f32 dt)
 {
     Position = Wrap(Position + Velocity * dt);
     Angle += Spin * dt;
+    FamilyTime = Emerald::Max(FamilyTime - dt, 0.0f);
 }
 
 void Asteroid::Draw(Emerald::Renderer2D& r, const Vec2& position, const Vec4& color) const

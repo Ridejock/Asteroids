@@ -16,6 +16,7 @@
 #include "HighScores.h"
 #include "Meta.h"
 #include "Random.h"
+#include "RockBounce.h"
 #include "Run.h"
 #include "Saucer.h"
 #include "ScoreScreens.h"
@@ -122,6 +123,7 @@ public:
     [[nodiscard]] const std::vector<GameSound>& GetSounds() const override { return m_Sounds; }
     void ClearSounds() override { m_Sounds.clear(); }
     void SetPrompts(Prompts prompts) override { m_Prompts = std::move(prompts); }
+    void SetRockBounce(bool on) override { m_RockBounce = on; }
     void SetHighScores(HighScoreTable table) override { m_HighScores = std::move(table); }
     [[nodiscard]] const HighScoreTable& GetHighScores() const override { return m_HighScores; }
     [[nodiscard]] bool ConsumeHighScoresChanged() override
@@ -266,6 +268,10 @@ private:
     std::vector<Rock> m_Rocks;
     std::vector<Rock> m_NewRocks; // fragments, added after the collision pass
     u32 m_NextRockId = 1;
+    bool m_RockBounce = false; // the ROCK BOUNCE option
+    RockBounce m_Bounce;
+    std::vector<Asteroid*> m_BounceRocks; // scratch: the rocks for m_Bounce
+    u32 m_RockFamily = 0;                 // last family given to fragments
     std::vector<Shot> m_Shots;
     std::vector<EnemyShot> m_EnemyShots;
     std::vector<Enemy> m_Enemies;

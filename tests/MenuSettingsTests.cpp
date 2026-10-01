@@ -35,11 +35,12 @@ void TestSettingsRoundTrip()
     settings.ScreenShake = false;
     settings.Particles = false;
     settings.Crt = true;
+    settings.RockBounce = true;
 
     const Settings parsed = Settings::Parse(settings.Serialize());
     Check(parsed.MasterVolume == 30 && parsed.SfxVolume == 70, "volumes survive a round trip");
     Check(parsed.Fullscreen && !parsed.VSync && !parsed.ScreenShake && !parsed.Particles &&
-              parsed.Crt,
+              parsed.Crt && parsed.RockBounce,
           "switches survive a round trip");
 }
 
@@ -61,6 +62,13 @@ void TestSettingsBadInput()
           "particles default on and can be switched off");
     Check(!defaults.Crt && Settings::Parse("crt_effect = on\n").Crt,
           "CRT effect defaults off and can be switched on");
+    Check(!defaults.RockBounce && Settings::Parse("rock_bounce = on\n").RockBounce,
+          "rock bounce defaults off and can be switched on");
+    // A game can pick other defaults (ROGUE turns rock bounce on): the file still wins.
+    const Settings rogue{.RockBounce = true};
+    Check(Settings::Parse("vsync = off\n", rogue).RockBounce &&
+              !Settings::Parse("rock_bounce = off\n", rogue).RockBounce,
+          "keys missing from the file keep the game's defaults");
 }
 
 void TestSettingsFile()
@@ -73,6 +81,8 @@ void TestSettingsFile()
     Check(Settings::Load(file).SfxVolume == 40, "saved settings load back");
     std::filesystem::remove(file);
     Check(Settings::Load(file).SfxVolume == Settings().SfxVolume, "a missing file gives defaults");
+    Check(Settings::Load(file, {.RockBounce = true}).RockBounce,
+          "a missing file gives the game's defaults");
 }
 
 void TestMenu()

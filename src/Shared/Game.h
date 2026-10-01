@@ -15,6 +15,7 @@
 #include "GameMode.h"
 #include "HighScores.h"
 #include "Random.h"
+#include "RockBounce.h"
 #include "Saucer.h"
 #include "ScoreScreens.h"
 #include "Ship.h"
@@ -97,6 +98,7 @@ public:
     // Counts every destroyed ship, so the app can react (e.g. rumble) when it changes.
     [[nodiscard]] u32 GetShipsLost() const override { return m_ShipsLost; }
     void SetPrompts(Prompts prompts) override { m_Prompts = std::move(prompts); }
+    void SetRockBounce(bool on) override { m_RockBounce = on; }
 
     // The saucer currently on screen, if any (Main plays its looping sound).
     [[nodiscard]] std::optional<SaucerSize> GetSaucerSize() const override
@@ -158,6 +160,10 @@ private:
     f32 m_FlameLength = 0.0f; // flickers randomly while thrusting
 
     std::vector<Asteroid> m_Asteroids;
+    bool m_RockBounce = false; // the ROCK BOUNCE option
+    RockBounce m_Bounce;
+    std::vector<Asteroid*> m_BounceRocks; // scratch: the rocks for m_Bounce
+    u32 m_RockFamily = 0;                 // last family given to fragments
     std::vector<Bullet> m_Bullets;
     std::vector<Particle> m_Particles;
 

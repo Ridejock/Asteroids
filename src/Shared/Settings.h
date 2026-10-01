@@ -17,6 +17,7 @@ namespace Asteroids {
 //   screen_shake = on
 //   particles = on
 //   crt_effect = off
+//   rock_bounce = off
 //
 // Unknown keys and bad values are ignored (the default stays), so an old or hand-edited file
 // never breaks the game.
@@ -28,17 +29,21 @@ struct Settings {
     bool Fullscreen = false;
     bool VSync = true;
     bool ScreenShake = true;
-    bool Particles = true; // sparks, dust and exhaust
-    bool Crt = false;      // CRT monitor post-process (only the vector game offers it)
+    bool Particles = true;   // sparks, dust and exhaust
+    bool Crt = false;        // CRT monitor post-process (only the vector game offers it)
+    bool RockBounce = false; // rocks bounce off one another (each game picks its default)
 
     [[nodiscard]] std::string Serialize() const;
+    // Keys missing from `text` keep their value from `defaults` (or the defaults above).
     [[nodiscard]] static Settings Parse(std::string_view text);
+    [[nodiscard]] static Settings Parse(std::string_view text, const Settings& defaults);
 
     // <per-user folder of the game `fileName`>/settings.txt, or empty if there is no such folder.
     [[nodiscard]] static std::filesystem::path DefaultPath(std::string_view fileName);
-    // A missing or unreadable file gives the defaults. Does not log (it runs before the log
+    // A missing or unreadable file gives `defaults`. Does not log (it runs before the log
     // exists, to create the window in the right mode).
     [[nodiscard]] static Settings Load(const std::filesystem::path& file);
+    [[nodiscard]] static Settings Load(const std::filesystem::path& file, const Settings& defaults);
     bool Save(const std::filesystem::path& file) const; // logs failures
 };
 

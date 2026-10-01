@@ -54,13 +54,19 @@ std::string Settings::Serialize() const
         << "vsync = " << OnOff(VSync) << '\n'
         << "screen_shake = " << OnOff(ScreenShake) << '\n'
         << "particles = " << OnOff(Particles) << '\n'
-        << "crt_effect = " << OnOff(Crt) << '\n';
+        << "crt_effect = " << OnOff(Crt) << '\n'
+        << "rock_bounce = " << OnOff(RockBounce) << '\n';
     return out.str();
 }
 
 Settings Settings::Parse(std::string_view text)
 {
-    Settings settings;
+    return Parse(text, Settings());
+}
+
+Settings Settings::Parse(std::string_view text, const Settings& defaults)
+{
+    Settings settings = defaults;
     while (!text.empty()) {
         const usize end = text.find('\n');
         const std::string_view line = text.substr(0, end);
@@ -85,6 +91,8 @@ Settings Settings::Parse(std::string_view text)
             ParseBool(value, settings.Particles);
         else if (key == "crt_effect")
             ParseBool(value, settings.Crt);
+        else if (key == "rock_bounce")
+            ParseBool(value, settings.RockBounce);
     }
     return settings;
 }
@@ -98,12 +106,17 @@ std::filesystem::path Settings::DefaultPath(std::string_view fileName)
 
 Settings Settings::Load(const std::filesystem::path& file)
 {
+    return Load(file, Settings());
+}
+
+Settings Settings::Load(const std::filesystem::path& file, const Settings& defaults)
+{
     std::ifstream in(file, std::ios::binary);
     if (file.empty() || !in)
-        return {};
+        return defaults;
     std::stringstream buffer;
     buffer << in.rdbuf();
-    return Parse(buffer.str());
+    return Parse(buffer.str(), defaults);
 }
 
 bool Settings::Save(const std::filesystem::path& file) const

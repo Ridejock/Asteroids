@@ -86,7 +86,7 @@ During a game, **Esc / P / pad Start pauses** with a menu: *Resume*, *Options*, 
 **Options:** master volume and effects volume (0–100 in steps of 10), fullscreen (borderless, on
 the current display), vsync, screen shake (a short jolt on explosions), particles (sparks, dust and engine exhaust; see
 [Particles](#particles)), in ROCK BLASTER the CRT effect (see [CRT effect](#crt-effect-rock-blaster)),
-and the controls reference. Every change applies at once and is saved to
+rock bounce (see [Rock bounce](#rock-bounce)), and the controls reference. Every change applies at once and is saved to
 `settings.txt` in the per-user folder (see [High scores](#high-scores) for where that is), one
 `key = value` per line:
 
@@ -98,6 +98,7 @@ vsync = on
 screen_shake = on
 particles = on
 crt_effect = off
+rock_bounce = off
 ```
 
 Unknown keys and bad values are ignored, so a hand-edited file cannot break the game. (Runs with
@@ -112,6 +113,29 @@ the edges and a vignette. There are no scanlines or aperture mask, like a real v
 (Emerald has both, off by default). It is **off by default** for now and saved as `crt_effect` in
 `settings.txt`; ROCK BLASTER ROGUE does not offer it. The debug-full build's ImGui panel has
 sliders for every parameter (`Emerald::CrtParams`), to try other looks live.
+
+## Rock bounce
+
+*Options > ROCK BOUNCE* makes rocks bounce off one another instead of drifting through each
+other. It is **off by default in ROCK BLASTER**, which keeps the classic look and feel, and **on by
+default in ROCK BLASTER ROGUE**. It is saved as `rock_bounce` in `settings.txt`, and
+`--rock-bounce on|off` sets it for one run.
+
+How it works (`src/Shared/RockBounce.cpp`):
+
+- Rocks are circles with mass proportional to their area, so a small rock glances off a big one
+  that hardly moves.
+- Pairs come from Emerald's `SpatialHash` in wrap mode, so rocks also collide across the screen
+  edges.
+- Each touching pair is pushed apart (split by mass, so rocks don't stay stuck in one another).
+  If the two are moving towards each other, they also get a slightly inelastic impulse
+  (restitution 0.9).
+- The fragments of one rock ignore each other for 0.75 s, so they fly apart as before instead of
+  bursting out of each other.
+- Scoring, particles and every other collision are unchanged.
+
+All of the games' circle checks (`CirclesOverlap`) go through Emerald's `Collision.h`, with the
+same results as the old code. `GameLogicTests` compares the two on random and exact-touch cases.
 
 ## Particles
 
@@ -335,6 +359,7 @@ RockBlaster --screen options                    # start on: title, scores, contr
 RockBlaster --saucer small                      # testing: a game with a saucer (large|small)
 RockBlaster --game-over 12345                   # testing: end at once with this score
 RockBlaster --crt on                            # CRT effect on/off for this run (not saved)
+RockBlaster --rock-bounce on                    # rock bounce on/off for this run (not saved)
 RockBlaster --gpu vulkan                        # GPU backend: vulkan, d3d12, metal or auto
 ```
 

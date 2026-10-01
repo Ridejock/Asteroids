@@ -78,7 +78,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        63307c9ee628c89963432fcb5c11ca645c659aa0
+    GIT_TAG        b7f42c0e0230d48b829f676b25fa52de194ec209
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
@@ -122,6 +122,8 @@ add_library(AsteroidsShared STATIC
     src/Shared/VectorFont.h
     src/Shared/Playfield.h
     src/Shared/Random.h
+    src/Shared/RockBounce.cpp
+    src/Shared/RockBounce.h
     src/Shared/Sounds.cpp
     src/Shared/Sounds.h
 )
