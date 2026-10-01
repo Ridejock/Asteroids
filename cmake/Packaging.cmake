@@ -6,7 +6,8 @@
 #   -> build/release/<PIXEL_FILE_NAME>-<version>-windows-x64.zip  (pixel roguelike, component Rogue)
 #
 # Each contains only what a player needs: the .exe, its compiled shaders, its font
-# (assets/fonts/, with the font's license), README.txt, LICENSE.txt and THIRD_PARTY_LICENSES.txt;
+# (assets/fonts/, with the font's license), README.txt, LICENSE.txt, THIRD_PARTY_LICENSES.txt
+# and .itch.toml (the itch.io app's manifest: a Play action that launches the .exe);
 # the roguelike also its sprites (assets/pixel/).
 # Nothing else from assets/ is installed: player-supplied sound overrides (assets/sounds/, often
 # copyrighted) must never ship.
@@ -20,6 +21,17 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/README.txt.in" "${package_
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/README-rogue.txt.in"
                "${package_dir}/rogue/README.txt" @ONLY NEWLINE_STYLE CRLF)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "${package_dir}/LICENSE.txt" COPYONLY)
+
+# .itch.toml at the root of each zip, so the itch.io app's Play button starts the right
+# executable (https://itch.io/docs/itch/integrating/manifest.html). The path is the target's
+# real file name, e.g. RockBlaster.exe.
+function(_write_itch_manifest file target)
+    file(GENERATE OUTPUT "${file}"
+         CONTENT "# itch.io app manifest: what the Play button launches.\n[[actions]]\nname = \"play\"\npath = \"$<TARGET_FILE_NAME:${target}>\"\n"
+         NEWLINE_STYLE UNIX)
+endfunction()
+_write_itch_manifest("${package_dir}/vector/.itch.toml" Asteroids)
+_write_itch_manifest("${package_dir}/rogue/.itch.toml" AsteroidsPixel)
 
 # THIRD_PARTY_LICENSES.txt: the license texts of everything linked into the .exe, taken from the
 # fetched sources, so they always match the pinned versions.
@@ -93,6 +105,7 @@ install(DIRECTORY "$<TARGET_FILE_DIR:Asteroids>/shaders/" DESTINATION shaders CO
 install(FILES "${fonts_dir}/ShareTechMono-Regular.ttf" "${fonts_dir}/ShareTechMono-OFL.txt"
         DESTINATION assets/fonts COMPONENT Game)
 install(FILES "${package_dir}/README.txt" "${package_dir}/LICENSE.txt" "${vector_notices}"
+              "${package_dir}/vector/.itch.toml"
         DESTINATION . COMPONENT Game)
 
 # The roguelike ("Rogue" component): the same, plus its sprites.
@@ -105,6 +118,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/pixel/atlas.png"
 install(FILES "${fonts_dir}/PressStart2P-Regular.ttf" "${fonts_dir}/PressStart2P-OFL.txt"
         DESTINATION assets/fonts COMPONENT Rogue)
 install(FILES "${package_dir}/rogue/README.txt" "${package_dir}/LICENSE.txt" "${rogue_notices}"
+              "${package_dir}/rogue/.itch.toml"
         DESTINATION . COMPONENT Rogue)
 
 if(WIN32)

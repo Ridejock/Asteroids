@@ -355,8 +355,8 @@ Each game has its own zip for 64-bit Windows (and its own itch.io page):
 cmake --preset release
 cmake --build --preset release
 cmake --build --preset release --target package
-# -> build\release\RockBlaster-1.2.0-windows-x64.zip
-#    build\release\RockBlasterRogue-1.2.0-windows-x64.zip
+# -> build\release\RockBlaster-1.2.1-windows-x64.zip
+#    build\release\RockBlasterRogue-1.2.1-windows-x64.zip
 ```
 
 The roguelike's zip has `RockBlasterRogue.exe`, the shaders, `assets\pixel\atlas.png/json`,
@@ -366,25 +366,27 @@ It contains `RockBlaster.exe` (icon and version info embedded; static C++ runtim
 runs on a clean Windows 10/11 PC), the compiled `shaders\` folder, `README.txt` (controls, rules,
 credits, generated from `packaging/README.txt.in`), `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`
 (the licenses of Emerald, SDL3 with HIDAPI, spdlog + {fmt}, stb, nlohmann/json and dr_mp3, taken
-from the fetched sources at configure time, plus the SIL Open Font License of the game's font)
-and `assets\fonts\` (the font and its license). Nothing else from `assets/` is packaged. The rules are in
+from the fetched sources at configure time, plus the SIL Open Font License of the game's font),
+`assets\fonts\` (the font and its license), and `.itch.toml`, the [itch app
+manifest](https://itch.io/docs/itch/integrating/manifest.html) whose Play action launches the
+.exe. Nothing else from `assets/` is packaged. The rules are in
 `cmake/Packaging.cmake`; `cmake --install build/release --component Game --prefix <dir>` (or `Rogue`) gives
 the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`; what
 changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 **GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
-push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.2.0` (etc.) also
+push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.2.1` (etc.) also
 attaches both zips to the GitHub release of that tag (creating it if needed):
 
 ```sh
-git tag v1.2.0 && git push origin v1.2.0
+git tag v1.2.1 && git push origin v1.2.1
 ```
 
 **Uploading to itch.io** with [butler](https://itch.io/docs/butler/) (after creating the game page
 on itch.io; `butler login` once):
 
 ```sh
-butler push RockBlaster-1.2.0-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.2.0
+butler push RockBlaster-1.2.1-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.2.1
 ```
 
 The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 (2026-10-01)
+
+- itch app manifest: each zip has a `.itch.toml` at its root, so the itch.io app's Play button
+  launches the right game (`RockBlaster.exe` / `RockBlasterRogue.exe`).
+
 ## 1.2.0 (2026-09-30)
 
 - New game: **ROCK BLASTER ROGUE** (`RockBlasterRogue.exe`, its own per-user folder and zip), a
