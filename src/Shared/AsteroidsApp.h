@@ -12,7 +12,7 @@
 #include "GameMode.h"
 #include "Menu.h"
 #include "ParticleEffects.h"
-#include "Random.h"
+#include "Playfield.h"
 #include "Screens.h"
 #include "Settings.h"
 #include "Sounds.h"
@@ -144,7 +144,7 @@ private:
     {
         return static_cast<f32>(m_Settings.SfxVolume) / 100.0f;
     }
-    void AddShake(f32 amount);
+    void AddShake(f32 amount); // playfield pixels; 10 = full camera trauma
 
     [[nodiscard]] static Menu MakeTitleMenu(const GameMode& mode);
 
@@ -172,8 +172,8 @@ private:
     PadLabels m_PadLabels;
     std::optional<Emerald::Texture> m_White; // 1 x 1, to darken the game behind menus
 
-    f32 m_Shake = 0.0f; // screen shake amplitude in playfield pixels, decays quickly
-    Random m_ShakeRandom{1234};
+    // Shows the playfield letterboxed in the window, and does the screen shake.
+    Emerald::Camera2D m_Camera{kPlayfieldSize};
 
     Sounds m_Sounds;
     Emerald::VoiceHandle m_ThrustVoice;

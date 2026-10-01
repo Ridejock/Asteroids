@@ -5,6 +5,9 @@
 - `--gpu vulkan|d3d12|direct3d12|metal|auto` picks the GPU backend at launch (both games; wins
   over `SDL_GPU_DRIVER`, falls back to auto if the backend is unknown or cannot start). The
   backend is logged and shown in the debug-full ImGui panel. Emerald updated to `ff876bd`.
+- The letterboxed playfield and the screen shake now use Emerald's `Camera2D` (same picture;
+  the shake is trauma based: smooth, frame-rate independent, gone within half a second).
+  Emerald updated to `63307c9`.
 
 ## 1.2.1 (2026-10-01)
 

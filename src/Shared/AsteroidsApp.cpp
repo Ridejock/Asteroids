@@ -33,8 +33,7 @@ using Emerald::GamepadButton;
 using Emerald::Key;
 using Emerald::Mat4;
 
-constexpr f32 kShakeDecay = 7.0f; // per second (exponential)
-constexpr f32 kMaxShake = 10.0f;  // playfield pixels
+constexpr f32 kMaxShake = 10.0f; // playfield pixels at full trauma
 const Vec4 kMenuHint{0.95f, 0.97f, 1.0f, 0.45f};
 
 // Seconds into the title screen at which `page` shows (see TitleScreen::PageAt).
@@ -203,6 +202,9 @@ void AsteroidsApp::BindControls()
 void AsteroidsApp::OnStart()
 {
     BindControls();
+    // Shake: up to kMaxShake pixels (trauma^2), no rotation, gone within half a second.
+    m_Camera.GetShakeParams() = {
+        .MaxOffset = kMaxShake, .MaxAngle = 0.0f, .Frequency = 30.0f, .Decay = 2.0f};
     EM_INFO("{} {}; settings file: {}", m_Edition.Title, GameInfo::kVersion,
             m_SettingsFile.empty() ? "none" : m_SettingsFile.string());
     GetWindow().SetIcon(MakeIcon(64));
@@ -305,7 +307,7 @@ void AsteroidsApp::OnFixedUpdate(f32 dt)
     menu.Back = in.WasActionPressed("MenuBack");
     const bool pausePressed = in.WasActionPressed("Pause");
     m_MenuTime += dt;
-    m_Shake *= std::exp(-kShakeDecay * dt);
+    m_Camera.Update(dt); // the shake dies down
 
     if (!m_Overlays.empty()) {
         // The pause key (P, pad Start) also closes the pause menu; Esc does that as "back".
@@ -398,34 +400,19 @@ void AsteroidsApp::OnUpdate(f32 /*dt*/)
 
 void AsteroidsApp::OnRender2D(Emerald::Renderer2D& r)
 {
-    // Fit the fixed-size playfield into the window: uniform scale, centered, black bars on
-    // the sides (or top and bottom) if the aspect ratio differs. We work in the render
-    // target's real pixels (the swapchain size of this frame), so the clip rectangle below
-    // is exact. Read the matrix right to left: playfield -> scaled -> moved into the
-    // window -> pixel-space projection.
+    // The camera fits the fixed-size playfield into the window: uniform scale, centered, black
+    // bars on the sides (or top and bottom) if the aspect ratio differs. It works in the render
+    // target's real pixels (the swapchain size of this frame), so the clip rectangle is exact.
     const Emerald::Renderer& renderer = GetRenderer();
-    const Vec2 target(static_cast<f32>(renderer.GetFrameWidth()),
-                      static_cast<f32>(renderer.GetFrameHeight()));
+    m_Camera.SetTargetSize(
+        {static_cast<f32>(renderer.GetFrameWidth()), static_cast<f32>(renderer.GetFrameHeight())});
+    m_Camera.GetShakeParams().Enabled = m_Settings.ScreenShake && m_Overlays.empty();
+    const Vec2 offset = m_Camera.GetViewport().Position;
     const Vec2 playfield = kPlayfieldSize;
-    const f32 scale = Emerald::Min(target.x / playfield.x, target.y / playfield.y);
-    const Vec2 size = playfield * scale;
-    const Vec2 offset = (target - size) * 0.5f;
-    // Screen shake: the whole playfield jumps by a random offset that dies down quickly.
-    Vec2 shake{};
-    if (m_Settings.ScreenShake && m_Overlays.empty() && m_Shake > 0.05f)
-        shake = m_ShakeRandom.Direction() * m_Shake;
-    const Mat4 viewProjection = Mat4::OrthoPixelSpace(target.x, target.y) *
-                                Mat4::Translate(offset) * Mat4::Scale(Vec2(scale)) *
-                                Mat4::Translate(shake);
 
-    // Clip to the playfield, so objects wrapping around an edge do not show in the bars.
-    // (Rounded outwards, so nothing on the playfield's edge is cut off.)
-    const i32 left = static_cast<i32>(std::floor(offset.x));
-    const i32 top = static_cast<i32>(std::floor(offset.y));
-    const SDL_Rect clip{left, top, static_cast<i32>(std::ceil(offset.x + size.x)) - left,
-                        static_cast<i32>(std::ceil(offset.y + size.y)) - top};
-
-    r.Begin(viewProjection, clip);
+    // Clipped to the playfield (rounded outwards), so objects wrapping around an edge do not
+    // show in the bars.
+    r.Begin(m_Camera);
     DrawWorld(r);
     m_Effects.Draw(r, GetParticleDrawOptions());
     if (!m_Game->IsOnTitle())
@@ -961,7 +948,7 @@ void AsteroidsApp::BuildOptionsMenu()
 
 void AsteroidsApp::AddShake(f32 amount)
 {
-    m_Shake = Emerald::Min(m_Shake + amount, kMaxShake);
+    m_Camera.AddTrauma(amount / kMaxShake);
 }
 
 } // namespace Asteroids
