@@ -78,7 +78,7 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        b7f42c0e0230d48b829f676b25fa52de194ec209
+    GIT_TAG        a0838b5e1a78cb1055946681e40fbb6ce5cfdef0
     GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)

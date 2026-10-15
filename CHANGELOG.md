@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Release CI calls Emerald's reusable `game.yml`: Windows and Linux packages, warnings as
+  errors (`emerald_set_warnings` with `EMERALD_WARNINGS_AS_ERRORS`; Emerald pinned to `a0838b5`),
+  and on a tag butler publishes `ridejock/rock-blaster` and `ridejock/rock-blaster-rogue`
+  (`windows` and `linux` channels). A missing `BUTLER_API_KEY` skips the upload. The version is
+  still `project(VERSION)`.
 - `--gpu vulkan|d3d12|direct3d12|metal|auto` picks the GPU backend at launch (both games; wins
   over `SDL_GPU_DRIVER`, falls back to auto if the backend is unknown or cannot start). The
   backend is logged and shown in the debug-full ImGui panel. Emerald updated to `ff876bd`.

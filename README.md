@@ -407,19 +407,39 @@ manifest](https://itch.io/docs/itch/integrating/manifest.html) whose Play action
 the same files unzipped. The version is `project(... VERSION ...)` in `CMakeLists.txt`; what
 changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
-**GitHub Actions** (`.github/workflows/release.yml`) builds this on `windows-latest` for every
-push to `main` and uploads both zips as workflow artifacts. Pushing a tag `v1.2.1` (etc.) also
-attaches both zips to the GitHub release of that tag (creating it if needed):
+**GitHub Actions** (`.github/workflows/release.yml`) calls Emerald's reusable workflow
+[`game.yml`](https://github.com/Ridejock/Emerald/blob/main/.github/workflows/game.yml). On every
+push to `main` and on pull requests it configures, builds and tests the `release` preset on
+Windows and Linux (warnings as errors), runs `cmake --build --preset release --target package`
+and uploads the archives. The same packaging rules apply on Linux, so the zips are
+`RockBlaster-1.2.1-linux-x64.zip` and `RockBlasterRogue-1.2.1-linux-x64.zip` (SPIR-V shaders;
+Windows still ships DXIL from shadercross). Pushing a tag `v1.2.1` (etc.) also attaches every
+archive to the GitHub release of that tag and publishes them with butler. The version butler
+sends is `project(... VERSION ...)` in `CMakeLists.txt`, not the tag text.
 
 ```sh
 git tag v1.2.1 && git push origin v1.2.1
 ```
 
-**Uploading to itch.io** with [butler](https://itch.io/docs/butler/) (after creating the game page
-on itch.io; `butler login` once):
+The pages are [ridejock/rock-blaster](https://ridejock.itch.io/rock-blaster) and
+[ridejock/rock-blaster-rogue](https://ridejock.itch.io/rock-blaster-rogue). `RockBlaster` is a
+prefix of `RockBlasterRogue`, so the workflow's `itch-games` list matches the longer name first.
+Each platform is its own channel:
+
+| Archive | itch target |
+|---|---|
+| `RockBlaster-*-windows-x64.zip` | `ridejock/rock-blaster:windows` |
+| `RockBlaster-*-linux-x64.zip` | `ridejock/rock-blaster:linux` |
+| `RockBlasterRogue-*-windows-x64.zip` | `ridejock/rock-blaster-rogue:windows` |
+| `RockBlasterRogue-*-linux-x64.zip` | `ridejock/rock-blaster-rogue:linux` |
+
+Publishing needs the repository secret `BUTLER_API_KEY`. When that secret is unset (a fork, or a
+pull request from a fork), the publish step skips and the run stays green. The same butler
+command still works by hand:
 
 ```sh
-butler push RockBlaster-1.2.1-windows-x64.zip <itch-user>/<game-page>:windows --userversion 1.2.1
+butler push RockBlaster-1.2.1-windows-x64.zip ridejock/rock-blaster:windows --userversion 1.2.1
+butler push RockBlasterRogue-1.2.1-windows-x64.zip ridejock/rock-blaster-rogue:windows --userversion 1.2.1
 ```
 
 The icon (`assets/icon/icon.ico` + `icon.png`) is drawn by code (`src/Shared/Icon.cpp`, the ship
