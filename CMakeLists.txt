@@ -83,6 +83,34 @@ FetchContent_Declare(Emerald
 )
 FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
 
+# Emerald's reusable game CI always configures with -DEMERALD_WARNINGS_AS_ERRORS=ON.
+# emerald_set_warnings turns that into /WX or -Werror when the pinned engine
+# implements the option. Apply it here as well, so a pin from before that option
+# still fails this game's build on a warning (dependencies stay as they are).
+function(asteroids_warnings_as_errors target)
+    if(NOT EMERALD_WARNINGS_AS_ERRORS)
+        return()
+    endif()
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /WX)
+        get_target_property(type ${target} TYPE)
+        if(type STREQUAL "STATIC_LIBRARY")
+            set_property(TARGET ${target} APPEND PROPERTY STATIC_LIBRARY_OPTIONS /WX)
+        else()
+            target_link_options(${target} PRIVATE /WX)
+        endif()
+    else()
+        target_compile_options(${target} PRIVATE -Werror)
+        # GCC 13 reports -Wstringop-overflow inside std::vector::push_back of small
+        # structs at -O2 (a known false positive, gone in GCC 14). Emerald's
+        # emerald_set_warnings suppresses it once the pin includes that; do the
+        # same here so release CI on Ubuntu 24.04 does not fail on it.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+            target_compile_options(${target} PRIVATE -Wno-stringop-overflow)
+        endif()
+    endif()
+endfunction()
+
 # ---------------------------------------------------------------------------
 # The game: one library with everything both versions share (rules, collisions, scoring, high
 # scores, sounds, controls, the app loop and HUD), and one small executable per look:
@@ -130,6 +158,7 @@ add_library(AsteroidsShared STATIC
 target_include_directories(AsteroidsShared PUBLIC src/Shared "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(AsteroidsShared PUBLIC Emerald::Emerald)
 emerald_set_warnings(AsteroidsShared) # /W4 on MSVC, -Wall -Wextra -Wpedantic elsewhere
+asteroids_warnings_as_errors(AsteroidsShared)
 
 # The pixel version's roguelike: runs, upgrades, bosses and the hangar (meta progress).
 add_library(AsteroidsRogue STATIC
@@ -145,6 +174,7 @@ add_library(AsteroidsRogue STATIC
 target_include_directories(AsteroidsRogue PUBLIC src/Rogue)
 target_link_libraries(AsteroidsRogue PUBLIC AsteroidsShared)
 emerald_set_warnings(AsteroidsRogue)
+asteroids_warnings_as_errors(AsteroidsRogue)
 
 add_executable(Asteroids src/Vector/Main.cpp)
 add_executable(AsteroidsPixel src/Pixel/Main.cpp)
@@ -168,6 +198,7 @@ foreach(game Asteroids AsteroidsPixel)
     # bin/shaders/ and tells the code which formats exist (EMERALD_SHADER_FORMATS).
     emerald_add_shaders(${game})
     emerald_set_warnings(${game})
+    asteroids_warnings_as_errors(${game})
     add_dependencies(${game} AsteroidsAssets)
 endforeach()
 
@@ -206,6 +237,7 @@ endif()
 add_executable(AsteroidsIconGen tools/IconGen/Main.cpp)
 target_link_libraries(AsteroidsIconGen PRIVATE AsteroidsShared)
 emerald_set_warnings(AsteroidsIconGen)
+asteroids_warnings_as_errors(AsteroidsIconGen)
 set_target_properties(AsteroidsIconGen PROPERTIES EXCLUDE_FROM_ALL ON)
 add_custom_target(UpdateIcon
     COMMAND AsteroidsIconGen "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon"
@@ -228,6 +260,7 @@ if(ASTEROIDS_BUILD_TESTS)
     foreach(test_target AsteroidsTests AsteroidsLogicTests AsteroidsMenuTests)
         target_link_libraries(${test_target} PRIVATE AsteroidsShared)
         emerald_set_warnings(${test_target})
+        asteroids_warnings_as_errors(${test_target})
     endforeach()
     add_test(NAME SoundOverrides COMMAND AsteroidsTests)
     add_test(NAME GameLogic COMMAND AsteroidsLogicTests)
@@ -237,6 +270,7 @@ if(ASTEROIDS_BUILD_TESTS)
     add_executable(AsteroidsRogueTests tests/RogueTests.cpp tests/Check.h)
     target_link_libraries(AsteroidsRogueTests PRIVATE AsteroidsRogue)
     emerald_set_warnings(AsteroidsRogueTests)
+asteroids_warnings_as_errors(AsteroidsRogueTests)
     add_test(NAME Roguelike COMMAND AsteroidsRogueTests)
 endif()
 
