@@ -22,15 +22,12 @@ on:
 permissions:
   contents: read
 
-# No concurrency group here. game.yml already sets
-# `${{ github.workflow }}-${{ github.ref }}`, and github.workflow inside that
-# call is this workflow's name. A second group with the same name deadlocks
-# the run ("between a top level workflow and 'game'").
-#
-# game.yml locates its helper scripts from GITHUB_WORKFLOW_REF, which on a
-# cross-repo call is this caller, not Emerald. tools/ci/ is that copy
-# (game-matrix.sh, install-linux-packages.sh, collect-packages.sh,
-# publish-itch.sh), matching Emerald main.
+# The caller's group. game.yml uses emerald-game-${{ github.workflow }}-${{ github.ref }}
+# so this does not deadlock with the called workflow. tools/ci is checked out
+# from Emerald; this repo does not copy those scripts.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   game:
