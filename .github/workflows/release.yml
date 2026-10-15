@@ -22,9 +22,10 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# No concurrency group here. game.yml already sets
+# `${{ github.workflow }}-${{ github.ref }}`, and github.workflow inside that
+# call is this workflow's name. A second group with the same name deadlocks
+# the run ("between a top level workflow and 'game'").
 
 jobs:
   game:
