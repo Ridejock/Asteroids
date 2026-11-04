@@ -13,8 +13,6 @@
 #include <string_view>
 #include <utility>
 
-#include <SDL3/SDL_events.h>
-
 #if EMERALD_WITH_IMGUI
 #include <imgui.h>
 #endif
@@ -260,29 +258,29 @@ void AsteroidsApp::ApplyStartScreen()
         OpenOverlay(Overlay::Options);
 }
 
-void AsteroidsApp::OnEvent(const SDL_Event& event)
+void AsteroidsApp::OnEvent(const Emerald::Event& event)
 {
-    switch (event.type) {
-    case SDL_EVENT_KEY_DOWN:
+    switch (event.Type) {
+    case Emerald::EventType::KeyDown:
         // F11 or Alt+Enter: fullscreen on/off (the Enter of Alt+Enter is ignored by the game).
-        if (!event.key.repeat &&
-            (event.key.scancode == SDL_SCANCODE_F11 ||
-             (event.key.scancode == SDL_SCANCODE_RETURN && (event.key.mod & SDL_KMOD_ALT) != 0)))
+        if (!event.Key.Repeat &&
+            (event.Key.Code == Key::F11 ||
+             (event.Key.Code == Key::Enter &&
+              Emerald::HasKeyMod(event.Key.Mods, Emerald::KeyMod::Alt))))
             ToggleFullscreen();
         // F9: CRT effect on/off (a quick A/B check; the same switch as in the options).
-        if (!event.key.repeat && event.key.scancode == SDL_SCANCODE_F9 && HasCrtOption())
+        if (!event.Key.Repeat && event.Key.Code == Key::F9 && HasCrtOption())
             ToggleCrt();
         break;
-    case SDL_EVENT_WINDOW_FOCUS_LOST:
+    case Emerald::EventType::WindowFocusLost:
         // Alt-tabbed away (or a notification took focus) mid-game: pause.
         if (m_Overlays.empty() && !m_Game->IsOnTitle() && !m_Game->IsOnGameOverScreen() &&
             !m_Game->IsInMenuScreen())
             Pause();
         break;
-    case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
-    case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN: {
+    case Emerald::EventType::WindowFullscreenChanged: {
         // Also changes made by the OS (e.g. a window manager shortcut): keep the setting in sync.
-        const bool fullscreen = event.type == SDL_EVENT_WINDOW_ENTER_FULLSCREEN;
+        const bool fullscreen = event.Fullscreen.Fullscreen;
         if (m_Settings.Fullscreen != fullscreen) {
             m_Settings.Fullscreen = fullscreen;
             SaveSettings();

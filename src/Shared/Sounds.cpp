@@ -37,7 +37,7 @@ Emerald::Sound Explosion(f32 seconds, f32 startHz, f32 endHz, f32 cutoffHz, f32 
 // and then cut off, so the sound can loop without a click or a gap.
 std::vector<f32> MakeLoopable(std::vector<f32> s, f32 fade)
 {
-    const usize n = static_cast<usize>(fade * static_cast<f32>(Emerald::kMixSpec.freq));
+    const usize n = static_cast<usize>(fade * static_cast<f32>(Emerald::kMixSampleRate));
     const usize length = s.size() - n;
     for (usize i = 0; i < n; ++i) {
         const f32 t = static_cast<f32>(i) / static_cast<f32>(n); // 0 -> 1 across the fade

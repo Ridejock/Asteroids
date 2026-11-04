@@ -92,7 +92,7 @@ void Draw(Emerald::Renderer2D& r, const GameInfo::Edition& edition, const GameMo
         if (std::fmod(time, 1.2f) < 0.8f)
             Text::DrawCentered(r, startPrompt, centerX, 400.0f, 28.0f, kText);
         Text::DrawCentered(r, "ESC: MENU", centerX, 470.0f, 18.0f, kDim);
-        Text::DrawCentered(r, "MADE WITH EMERALD AND SDL3", centerX, 600.0f, 16.0f, kFaint);
+        Text::DrawCentered(r, "MADE WITH EMERALD", centerX, 600.0f, 16.0f, kFaint);
         break;
     case Page::HighScores:
         game.DrawHighScoreTable(r, 300.0f);
