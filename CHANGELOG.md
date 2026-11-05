@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Emerald pinned to `6f4069eb` (SDL isolation). Game code takes `Emerald::Event`, `Emerald::Key`,
+  and `Emerald::GpuDevice`; shader formats come from `ShaderFormatFromMask`. The title credit is
+  "MADE WITH EMERALD".
 - Release CI calls Emerald's reusable `game.yml`: Windows and Linux packages, warnings as
   errors (`emerald_set_warnings` with `EMERALD_WARNINGS_AS_ERRORS`; Emerald pinned to `a0838b5`),
   and on a tag butler publishes `ridejock/rock-blaster` and `ridejock/rock-blaster-rogue`

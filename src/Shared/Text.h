@@ -4,12 +4,11 @@
 #include <string_view>
 #include <vector>
 
-#include <SDL3/SDL_gpu.h>
-
 #include <Emerald/Core/Defines.h>
 #include <Emerald/Math/Vec2.h>
 #include <Emerald/Math/Vec4.h>
 #include <Emerald/Renderer/Font.h>
+#include <Emerald/Renderer/Gpu.h>
 #include <Emerald/Renderer/Renderer2D.h>
 
 // All of the games' text (menus, HUD, screens) goes through here, so each executable picks its
@@ -53,7 +52,8 @@ void DrawCentered(Emerald::Renderer2D& r, std::string_view text, f32 centerX, f3
 // Loads assets/fonts/<file> (next to the executable) once per em size in `sizes`, the rest of
 // `options` shared. Empty if any fails (logged), so the caller keeps the line font. The fonts
 // hold GPU textures: keep them in the app and release them before the device.
-[[nodiscard]] std::vector<Emerald::Font> LoadFonts(SDL_GPUDevice* device, std::string_view file,
+[[nodiscard]] std::vector<Emerald::Font> LoadFonts(Emerald::GpuDevice* device,
+                                                   std::string_view file,
                                                    std::span<const f32> sizes,
                                                    const Emerald::FontOptions& options);
 // Style::Fonts for fonts loaded with LoadFonts.

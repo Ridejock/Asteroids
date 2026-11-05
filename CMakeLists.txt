@@ -78,10 +78,10 @@ endif()
 include(FetchContent)
 FetchContent_Declare(Emerald
     GIT_REPOSITORY https://github.com/Ridejock/Emerald.git
-    GIT_TAG        a0838b5e1a78cb1055946681e40fbb6ce5cfdef0
+    GIT_TAG        6f4069eb912d53bba54e725bbec47ebbee7c64f8
     GIT_PROGRESS   TRUE
 )
-FetchContent_MakeAvailable(Emerald) # also brings SDL3, spdlog, stb (and ImGui if enabled)
+FetchContent_MakeAvailable(Emerald) # spdlog, stb, and (privately) SDL3; ImGui if enabled
 
 # ---------------------------------------------------------------------------
 # The game: one library with everything both versions share (rules, collisions, scoring, high

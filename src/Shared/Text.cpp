@@ -157,7 +157,7 @@ f32 Width(std::string_view text, f32 height)
     return place.Source->MeasureText(Upper(text), place.Scale).x;
 }
 
-std::vector<Emerald::Font> LoadFonts(SDL_GPUDevice* device, std::string_view file,
+std::vector<Emerald::Font> LoadFonts(Emerald::GpuDevice* device, std::string_view file,
                                      std::span<const f32> sizes,
                                      const Emerald::FontOptions& options)
 {

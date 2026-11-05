@@ -42,7 +42,8 @@ struct Options {
 
 // The window, log file etc. every version uses, for `edition` (title, per-user folder, log
 // file name). The window starts fullscreen / with vsync as saved in `settings`. The caller still
-// sets ShaderFormats (EMERALD_SHADER_FORMATS is defined for the executable).
+// sets ShaderFormats with ShaderFormatFromMask (EMERALD_SHADER_FORMATS is defined for the
+// executable).
 [[nodiscard]] Emerald::ApplicationSpec MakeSpec(const Options& options, const Settings& settings,
                                                 const GameInfo::Edition& edition);
 // The seed for the game: --seed, or a random one.
@@ -97,7 +98,7 @@ protected:
     [[nodiscard]] virtual bool HasCrtOption() const { return false; }
 
     void OnStart() override;
-    void OnEvent(const SDL_Event& event) override;
+    void OnEvent(const Emerald::Event& event) override;
     void OnFixedUpdate(f32 dt) override;
     void OnUpdate(f32 dt) override;
     void OnRender2D(Emerald::Renderer2D& r) override;
